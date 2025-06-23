@@ -10,6 +10,10 @@
       "domains": ["github.com"],
       "split_by_path_segment": 1
     },
+    "技术栈/代码 & 开源/GitLab": {
+      "domains": ["gitlab.com"],
+      "split_by_path_segment": 1
+    },
     "技术栈/云服务 & DevOps": {
       "domains": ["docker.com", "kubernetes.io", "helm.sh", "circleci.com", "travis-ci.org"]
     }
@@ -29,7 +33,8 @@
         "spotify.com",
         "soundcloud.com",
         "music.apple.com",
-        "music.163.com"
+        "music.163.com",
+        "podcasts.google.com"
       ],
       "url_contains": []
     },
@@ -43,9 +48,10 @@
         "docs.google.com/presentation"
       ]
     },
-    "资料库/文档": {
-      "domains": [],
-      "url_contains": [],
+    "资料库/协作文档": {
+      "domains": ["notion.so", "docs.google.com", "feishu.cn", "yuque.com"]
+    },
+    "资料库/文件": {
       "url_ends_with": [
         ".pdf", ".epub", ".mobi",
         ".docx", ".pptx", ".doc", ".xls", ".xlsx"
@@ -72,73 +78,75 @@
       "stackoverflow.com", "stackexchange.com", "martinfowler.com", "css-tricks.com", 
       "smashingmagazine.com", "thenewstack.io", "techcrunch.com", "stratechery.com", 
       "news.ycombinator.com", "baeldung.com", "geeksforgeeks.org", "tutorialspoint.com", 
-      "w3schools.com", "towardsdatascience.com", "zhihu.com", "yuque.com", "jianshu.com"
+      "w3schools.com", "towardsdatascience.com", "zhihu.com", "jianshu.com",
+      "评测", "体验"
     ],
     "keywords_in_title": [
       "blog", "article", "post", "tutorial", "guide", "cheatsheet", "deep-dive",
-      "文章", "教程", "指南", "博客", "分享", "解析", "实践", "入门"
+      "文章", "教程", "指南", "博客", "分享", "解析", "实践", "入门",
+      "招聘", "求职", "career", "hiring", "job"
     ],
     "path_restrictions": {
       "zhihu.com": ["/p/", "/column/"],
-      "yuque.com": ["/docs/", "/posts/"]
+      "yuque.com": ["/docs/", "/posts/"],
+      "linkedin.com": [],
+      "zhipin.com": [],
+      "lagou.com": [],
+      "indeed.com": [],
+      "glassdoor.com": [],
+      "amap.com": [],
+      "dianping.com": [],
+      "meituan.com": [],
+      "12306.cn": []
     }
   },
   "category_rules": {
     "技术栈/云服务 & DevOps": {
-      "keywords": [
-        "aws", "amazon", "google cloud", "gcp", "azure", "microsoft", 
-        "docker", "kubernetes", "helm", "terraform", "ansible",
-        "vercel", "netlify", "cloudflare", "heroku"
+      "rules": [
+        { "match": "domain", "keywords": ["docker.com", "kubernetes.io", "helm.sh", "aws.amazon.com", "cloud.google.com", "azure.microsoft.com", "vercel.com", "netlify.com", "cloudflare.com", "heroku.com", "circleci.com", "travis-ci.org", "jenkins.io"], "weight": 10 },
+        { "match": "title", "keywords": ["devops", "kubernetes", "docker", "aws", "gcp", "azure", "terraform", "ansible", "ci/cd"], "weight": 5 }
       ]
     },
     "技术栈/Web 开发": {
-      "keywords": [
-        "react", "vue", "angular", "svelte", "next.js", "nuxt.js",
-        "webpack", "vite", "css", "html", "javascript", "typescript",
-        "nodejs", "deno", "express"
+      "rules": [
+        { "match": "title", "keywords": ["react", "vue", "angular", "svelte", "next.js", "nuxt.js", "webpack", "vite", "css", "html", "javascript", "typescript", "nodejs", "deno", "express", "web dev"], "weight": 5 }
       ]
     },
     "技术栈/后端 & 数据库": {
-      "keywords": [
-        "python", "django", "flask", "fastapi",
-        "rust", "golang", "go",
-        "java", "spring",
-        "sql", "mysql", "postgresql", "sqlite", "mongodb", "redis"
+      "rules": [
+        { "match": "domain", "keywords": ["python.org", "rust-lang.org", "java.com", "mongodb.com", "redis.io", "postgresql.org"], "weight": 10 },
+        { "match": "title", "keywords": ["python", "django", "flask", "fastapi", "rust", "golang", "java", "spring", "sql", "mysql", "postgresql", "sqlite", "mongodb", "redis"], "weight": 5, "must_not_contain": ["go out", "go shopping", "game", "play rust"] },
+        { "match": "title", "keywords": [" go "], "weight": 4, "must_not_contain": ["go out", "go shopping"]}
       ]
     },
     "技术栈/AI & 数据科学": {
-      "keywords": [
-        "tensorflow", "pytorch", "keras", "scikit-learn", "pandas", "numpy",
-        "jupyter", "colab", "kaggle",
-        "openai", "claude", "gemini", "huggingface", "llama", "mistral"
-      ]
-    },
-    "技术栈/综合": {
-      "keywords": [
-        "stackoverflow.com",
-        "github.com",
-        "dev.to",
-        "medium.com",
-        "juejin.cn",
-        "segmentfault.com"
+      "rules": [
+        { "match": "domain", "keywords": ["openai.com", "huggingface.co", "kaggle.com", "tensorflow.org", "pytorch.org"], "weight": 10 },
+        { "match": "title", "keywords": ["tensorflow", "pytorch", "keras", "scikit-learn", "pandas", "numpy", "jupyter", "colab", "kaggle", "openai", "claude", "gemini", "huggingface", "llama", "mistral", "sora", "llm"], "weight": 5 }
       ]
     },
     "设计 & 创意": {
-      "keywords": [
-        "dribbble.com",
-        "behance.net",
-        "pinterest.com",
-        "design"
+      "rules": [
+        { "match": "domain", "keywords": ["dribbble.com", "behance.net", "pinterest.com", "adobe.com"], "weight": 10 },
+        { "match": "title", "keywords": ["design", "ui/ux", "illustration", "photoshop", "figma"], "weight": 5 }
       ]
     },
     "新闻 & 资讯": {
-      "keywords": [
-        "news.ycombinator.com",
-        "techcrunch.com",
-        "theverge.com",
-        "reuters.com",
-        "bloomberg.com",
-        "wsj.com"
+      "rules": [
+        { "match": "domain", "keywords": ["news.ycombinator.com", "techcrunch.com", "theverge.com", "reuters.com", "bloomberg.com", "wsj.com", "bbc.com", "nytimes.com"], "weight": 10 },
+        { "match": "title", "keywords": ["news", "report", "breaking", "headline"], "weight": 4 }
+      ]
+    },
+    "求职 & 招聘": {
+      "rules": [
+        { "match": "domain", "keywords": ["linkedin.com", "zhipin.com", "lagou.com", "indeed.com", "glassdoor.com"], "weight": 10 },
+        { "match": "title", "keywords": ["招聘", "求职", "career", "hiring", "job"], "weight": 5 }
+      ]
+    },
+    "生活 & 服务": {
+      "rules": [
+        { "match": "domain", "keywords": ["amap.com", "dianping.com", "meituan.com", "12306.cn"], "weight": 10 },
+        { "match": "title", "keywords": ["地图", "外卖", "点评", "火车票", "旅行"], "weight": 5 }
       ]
     }
   },

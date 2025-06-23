@@ -103,18 +103,44 @@ def classify_bookmark(url, title, seen_urls, config):
             if any(kw in lower_title for kw in rule.get("keywords_in_title", [])):
                 return "稍后阅读", (url, title)
 
-        # --- 4. 通用分类规则处理器 ---
+        # --- 4. 通用分类规则处理器 (基于权重评分) ---
         elif rule_type == "category_rules":
-            rules = config.get("category_rules", {})
-            domain_based_subcats = {tuple(item) for item in config.get("domain_based_subcats", [])}
-            # (这里的逻辑与旧版类似, 但需要适配新的 categories 结构)
-            for category_path_str, rule in rules.items():
+            rules_config = config.get("category_rules", {})
+            scores = {}
+
+            for category_path_str, category_data in rules_config.items():
                 category_path = tuple(category_path_str.split('/'))
-                for keyword in rule.get("keywords", []):
-                    if keyword in domain or keyword in url or keyword in lower_title:
-                        if category_path in domain_based_subcats:
-                            return category_path + (domain,), (url, title)
-                        return category_path, (url, title)
+                scores[category_path] = 0
+                
+                for rule in category_data.get("rules", []):
+                    weight = rule.get("weight", 1)
+                    match_target_str = ""
+                    
+                    match_type = rule.get("match")
+                    if match_type == "domain":
+                        match_target_str = domain
+                    elif match_type == "url":
+                        match_target_str = url
+                    elif match_type == "title":
+                        match_target_str = lower_title
+                    
+                    if not match_target_str:
+                        continue
+                        
+                    # 检查是否包含任一关键词
+                    if any(kw in match_target_str for kw in rule.get("keywords", [])):
+                        # 检查是否包含任一排除词
+                        if any(nkw in match_target_str for nkw in rule.get("must_not_contain", [])):
+                            continue # 包含排除词，此条规则不计分
+                        
+                        scores[category_path] += weight
+
+            # 找出得分最高的分类
+            if any(s > 0 for s in scores.values()):
+                best_category = max(scores, key=scores.get)
+                # 可选：设置一个阈值，防止低分误匹配
+                if scores[best_category] > 0:
+                    return best_category, (url, title)
 
     return "未分类", (url, title)
 
@@ -141,38 +167,52 @@ def build_structure(categorized_bookmarks):
             add_nested((path,), (url, title))
     
     def simplify_single_item_folders(node):
-        """递归地合并只包含单个书签且无子文件夹的目录"""
+        """
+        递归地合并只包含单个书签且无子文件夹的目录。
+        这个实现通过构建新字典来避免迭代时修改的副作用。
+        """
         if not isinstance(node, dict):
             return node
 
-        # 先递归处理子节点
-        for key, value in list(node.items()):
+        # 1. 首先，递归简化所有子节点
+        simplified_children = {}
+        for key, value in node.items():
             if key != "_items":
-                node[key] = simplify_single_item_folders(value)
+                simplified_children[key] = simplify_single_item_folders(value)
 
-        # 检查当前节点下的子文件夹，看是否可以合并
-        for key, value in list(node.items()):
-            if key == "_items":
-                continue
-            
-            # 条件：子文件夹(value)中只有一个书签，并且没有更深的子文件夹
-            has_subfolders = any(k != "_items" for k in value)
-            is_single_bookmark = len(value.get("_items", [])) == 1
+        # 2. 然后，基于简化后的子节点，构建当前层级的新节点
+        new_node = {}
+        # 先把当前层级的书签带过来
+        if "_items" in node:
+            new_node["_items"] = node["_items"]
+
+        for key, simplified_child in simplified_children.items():
+            # 检查这个简化后的子节点是否可以被合并
+            has_subfolders = any(k != "_items" for k in simplified_child)
+            is_single_bookmark = len(simplified_child.get("_items", [])) == 1
 
             if not has_subfolders and is_single_bookmark:
-                # 将该书签上移到当前节点的 _items 列表
-                single_item = value["_items"][0]
-                if "_items" not in node:
-                    node["_items"] = []
-                # 为了避免命名冲突，将文件夹名附在标题前
+                # 是单项文件夹，将其中的书签"提起"到当前层级
+                single_item = simplified_child["_items"][0]
+                if "_items" not in new_node:
+                    new_node["_items"] = []
+                
                 new_title = f"[{key}] {single_item[1]}"
-                node["_items"].append((single_item[0], new_title))
-                # 删除已被合并的子文件夹
-                del node[key]
+                new_node["_items"].append((single_item[0], new_title))
+            else:
+                # 不是单项文件夹，保持原样
+                new_node[key] = simplified_child
         
-        return node
+        return new_node
 
-    return simplify_single_item_folders(structured)
+    # 不要对顶层结构本身进行简化，而是对每个顶层分类的内部进行简化
+    # return simplify_single_item_folders(structured) # 旧的、错误的方式
+
+    simplified_structure = {}
+    for top_level_cat, content in structured.items():
+        simplified_structure[top_level_cat] = simplify_single_item_folders(content)
+
+    return simplified_structure
 
 
 def generate_markdown(structured_bookmarks, md_file):
@@ -280,27 +320,40 @@ def main():
     
     # --- 多策略配置选择 ---
     if not config_file:
-        config_files = glob.glob('config_*.json')
-        if not config_files:
-            # 如果没有找到 config_*.json，则退回寻找 config.json
-            if os.path.exists('config.json'):
-                config_file = 'config.json'
-            else:
-                print("❌ 错误：未找到任何配置文件（config.json 或 config_*.json）。")
-                return
-        elif len(config_files) == 1:
-            config_file = config_files[0]
-            print(f"✅ 检测到单个策略配置，已自动选择: {config_file}")
+        # 优先寻找主配置文件
+        available_configs = []
+        if os.path.exists('config.json'):
+            available_configs.append('config.json')
+        
+        # 寻找其他策略文件
+        other_configs = sorted(glob.glob('config_*.json'))
+        for cfg in other_configs:
+            if cfg not in available_configs:
+                available_configs.append(cfg)
+
+        if not available_configs:
+            print("❌ 错误：未找到任何配置文件（config.json 或 config_*.json）。")
+            return
+        elif len(available_configs) == 1:
+            config_file = available_configs[0]
+            print(f"✅ 检测到单个配置，已自动选择: {config_file}")
         else:
             print("\n请选择要使用的分类策略：")
-            for i, f in enumerate(config_files):
-                print(f"  [{i + 1}] {f}")
+            # 将 config.json 标记为默认
+            for i, f in enumerate(available_configs):
+                default_marker = " (默认最强策略)" if f == 'config.json' else ""
+                print(f"  [{i + 1}] {f}{default_marker}")
             
             while True:
                 try:
-                    choice = int(input("请输入选项编号: "))
-                    if 1 <= choice <= len(config_files):
-                        config_file = config_files[choice - 1]
+                    choice_str = input("请输入选项编号 (直接回车使用默认): ")
+                    if not choice_str and 'config.json' in available_configs:
+                        config_file = 'config.json'
+                        break
+                    
+                    choice = int(choice_str)
+                    if 1 <= choice <= len(available_configs):
+                        config_file = available_configs[choice - 1]
                         break
                     else:
                         print("❌ 输入无效，请输入列表中的编号。")

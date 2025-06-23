@@ -3,88 +3,81 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 一个能自动合并、清理和分类浏览器书签的 Python 脚本。
-**本项目的核心是一套开放的、由社区驱动的分类规则库 (`config.json`)**，旨在成为最智能、最全面的书签自动整理方案。
-
-## 🚀 快速上手
-
-**只需 3 步，即可整理好您的所有书签。**
-
-**1. 准备项目**
-
-克隆此仓库并进入目录，然后安装依赖：
-
-```bash
-git clone https://github.com/YOUR_USERNAME/CleanBookmarks.git
-cd CleanBookmarks
-pip install -r requirements.txt
-```
-
-**2. 放入书签**
-
-将您从 Chrome / Edge / Firefox 等浏览器导出的书签文件（`.html`格式）全部放入 `tests/input` 文件夹。
-
-**3. 运行脚本**
-
-执行以下命令：
-
-```bash
-python src/clean&tidy.py
-```
-
-脚本运行完毕后，您会在 `tests/output` 目录找到整理好的 `bookmarks_cleaned.html` 和 `bookmarks.md` 文件。
-
----
-
-## ❤️ 贡献规则：让分类更智能
-
-**我们相信，最好的分类规则来自成千上万用户的真实需求。**
-
-如果您发现某个网站没有被正确分类，或者您希望为某个领域（比如生物、法律、金融）添加新的分类规则，我们非常欢迎您直接贡献！
-
-**贡献方式非常简单：**
-
-1.  **Fork** 本项目。
-2.  **编辑** 根目录下的 `config.json` 文件。您可以：
-    *   在 `format_rules` 中添加新的视频/文档/工具网站。
-    *   在 `categories` 中添加新的主题分类或扩充现有分类的 `keywords` 列表。
-3.  **发起 Pull Request**。
-
-您无需编写任何代码，只需修改 `config.json` 这一个文件，就能让这个工具变得更强大。让我们一起打造最完美的书签分类规则库！
+**本项目的核心是一套开放的、由社区驱动的分类规则库 (`config.json`)**，它驱动一个基于权重评分的智能引擎，旨在成为最全面、最合理的书签自动整理方案。
 
 ## ✨ 主要特性
 
-- **社区驱动的规则库**：核心 `config.json` 文件开放、可协作，不断进化。
-- **多维度分类**：同时根据**内容格式**（视频、文档）和**主题**（技术、设计）进行分类。
-- **多文件合并**：自动合并所有来源的书签。
-- **自动去重 & URL清理**：确保链接的干净与唯一。
-- **双格式输出**：同时生成 `HTML` (用于浏览器) 和 `Markdown` (用于阅读) 两种文件。
+- **基于权重的智能评分引擎**：告别简单的关键词匹配！本工具会对书签的域名、URL、标题等信息进行综合评估，为每个可能的分类计算得分，并选择得分最高的分类作为最终归宿，极大提升了分类的准确性和合理性。
+- **社区驱动的规则库**：核心 `config.json` 文件开放、可协作。我们鼓励用户贡献规则，共同使其不断进化，覆盖更多领域。
+- **多维度分类**：同时根据**内容格式**（视频、文档、代码库）和**内容主题**（技术、设计、新闻）进行精细分类。
+- **多策略管理**：支持创建多个 `config_*.json` 策略文件，在运行时按需选择，轻松应对不同场景（如工作、学习、个人）。
+- **自动化支持**：从自动合并、去重、URL 清理到最终生成可导入的 `HTML` 和可阅读的 `Markdown` 文件，全程自动化。
 
-## 🛠️ 进阶使用
+## 🚀 快速上手
 
-### 多策略管理
+**只需 3 步，即可体验强大的自动整理。**
 
-您可以创建多个不同的 `config_*.json` 文件（例如 `config_work.json`, `config_simple.json`），每一个文件代表一套独立的分类策略。
+1.  **准备项目**：克隆仓库，安装依赖。
+    ```bash
+    git clone https://github.com/YOUR_USERNAME/CleanBookmarks.git
+    cd CleanBookmarks
+    pip install -r requirements.txt
+    ```
+2.  **放入书签**：将您从浏览器导出的 `.html` 书签文件全部放入 `tests/input` 文件夹。
+3.  **运行脚本**：
+    ```bash
+    python src/clean&tidy.py
+    ```
+    脚本将自动使用默认的 `config.json` 规则库。如果检测到多个策略文件，会提示您进行选择。整理好的文件将输出到 `tests/output` 目录。
 
-当您直接运行 `python src/clean&tidy.py` 时，脚本会自动检测这些文件，并提供一个菜单让您选择本次要使用的策略。
+---
 
-### 命令行参数
+## ❤️ 贡献规则：打造最强大脑
 
-您依然可以通过命令行参数来精确控制脚本行为，这在自动化场景下非常有用。
+我们相信，最好的分类规则来自成千上万用户的真实需求。贡献规则是本项目最重要的贡献方式，且无需编写任何代码。
 
-```bash
-# 示例：强制使用 'my_rules.json'，并输出到指定位置
-python src/clean&tidy.py -c my_rules.json -i ~/Desktop/my_bookmarks.html --output-html D:/cleaned.html
+**贡献方式**：Fork 本项目 -> 编辑 `config.json` -> 发起 Pull Request。
+
+### 理解规则结构
+
+`config.json` 的核心是 `category_rules`，它定义了主题分类的逻辑。每个分类都由一个 `rules` 数组驱动：
+
+```json
+"技术栈/后端 & 数据库": {
+    "rules": [
+        { 
+            "match": "domain", 
+            "keywords": ["python.org", "rust-lang.org"], 
+            "weight": 10 
+        },
+        { 
+            "match": "title", 
+            "keywords": ["python", "golang", "go", "rust"], 
+            "weight": 5, 
+            "must_not_contain": ["game", "play rust"] 
+        },
+        { 
+            "match": "title", 
+            "keywords": [" go "],  // 注意 "go" 两边的空格，用于精确匹配单词
+            "weight": 4, 
+            "must_not_contain": ["go out", "go shopping"] 
+        }
+    ]
+}
 ```
-- `-i, --input`: 指定一个或多个输入文件。
-- `--output-html`: 指定 HTML 输出路径。
-- `--output-md`: 指定 Markdown 输出路径。
-- `-c, --config`: 指定 `config.json` 配置文件路径。
 
-### 自定义分类
+- `match`: 指定匹配对象，可以是 `domain` (域名), `url` (完整链接) 或 `title` (标题)。
+- `keywords`: 关键词列表。
+- `weight`: **权重**。这是智能评分的核心。**域名匹配的权重通常应该最高**，因为它最准确。标题匹配的权重应相对较低。
+- `must_not_contain`: **排除词列表**。如果匹配对象中出现了这里的任何一个词，该条规则将不计分。这对于消除歧义至关重要（例如，区分编程语言 `Rust` 和游戏 `Rust`）。
 
-您可以随时修改本地的 `config.json` 文件来添加私有的、不便共享的分类规则。
+您可以修改现有规则，或仿照此结构添加全新的分类，让我们的"大脑"更聪明！
 
-> **注意**：脚本内置了对 GitHub、常见技术博客（归入"稍后阅读"）等网站的优先分类逻辑，其优先级高于 `config.json` 中的主题分类。
+## 🛠️ 进阶使用：多策略管理
+
+您可以创建多个 `config_*.json` 文件（例如 `config_work.json`, `config_personal.json`），每个文件代表一套独立的分类策略。
+
+当您直接运行脚本时，它会自动检测这些文件，并提供一个菜单让您选择本次要使用的策略（直接回车可选用默认的 `config.json`）。您也可以通过 `--config` 参数强制指定一个配置文件。
 
 ## 📜 许可证
 
