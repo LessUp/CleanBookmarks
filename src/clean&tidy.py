@@ -18,6 +18,7 @@ import glob
 from bs4 import BeautifulSoup, Doctype
 import time
 from urllib.parse import urlparse
+from collections import Counter
 
 def clean_url(raw_url: str) -> str:
     """去除查询参数与锚点，返回净化后的 URL"""
@@ -284,6 +285,62 @@ def create_bookmark_html(structured_bookmarks, output_file):
         f.write("\n".join(lines))
 
 
+def _count_bookmarks_recursive(node):
+    """递归地统计一个节点下书签的总数"""
+    if not isinstance(node, dict):
+        return 0
+    count = len(node.get("_items", []))
+    for key, value in node.items():
+        if key != "_items":
+            count += _count_bookmarks_recursive(value)
+    return count
+
+def print_statistics(structured_data, total_links_found, unique_links_count):
+    """
+    打印关于书签集合的、有趣的统计信息。
+    """
+    print("\n📊----- 书签统计信息 -----📊")
+    
+    # 1. 去重统计
+    duplicates_found = total_links_found - unique_links_count
+    print(f"✨ 去重成果: 共找到并移除了 {duplicates_found} 个重复链接。")
+
+    # 2. 各分类书签数量
+    print("\n📚 各分类书签数量:")
+    category_counts = {}
+    all_domains = []
+    for category, content in structured_data.items():
+        category_counts[category] = _count_bookmarks_recursive(content)
+        
+        # 顺便收集域名用于后续统计
+        def collect_domains(node):
+            if not isinstance(node, dict): return
+            for url, title in node.get("_items", []):
+                try:
+                    all_domains.append(urlparse(url).netloc.lower())
+                except:
+                    pass # 忽略无法解析的URL
+            for key, value in node.items():
+                if key != "_items":
+                    collect_domains(value)
+        collect_domains(content)
+    
+    # 排序并打印分类统计
+    if category_counts:
+        sorted_categories = sorted(category_counts.items(), key=lambda item: item[1], reverse=True)
+        for category, count in sorted_categories:
+            print(f"  - {category:<20} : {count} 个") # 左对齐，方便阅读
+
+    # 3. Top 5 域名
+    if all_domains:
+        print("\n🌐 您最常访问的 Top 5 网站:")
+        top_5_domains = Counter(all_domains).most_common(5)
+        for i, (domain, count) in enumerate(top_5_domains):
+            print(f"  {i+1}. {domain} ({count} 次)")
+        
+    print("--------------------------\n")
+
+
 def main():
     """
     主函数，用于解析命令行参数并执行书签清理和分类的核心流程。
@@ -424,6 +481,7 @@ def main():
 
     print(f"\n🔍 共找到 {len(all_links)} 个书签链接（合并后）。")
 
+    unclassified_log = []
     categorized_bookmarks = []
     seen_urls = set()
 
@@ -435,10 +493,21 @@ def main():
             category, item = classify_bookmark(url, title.strip(), seen_urls, config)
             if category and item:
                 categorized_bookmarks.append((category, item))
+                if category == "未分类":
+                    unclassified_log.append(f"{url} | {title.strip()}")
+
+    if unclassified_log:
+        log_file_path = "unclassified_log.txt"
+        print(f"ℹ️  正在将 {len(unclassified_log)} 个未分类书签写入日志: {log_file_path}")
+        with open(log_file_path, "w", encoding="utf-8") as f:
+            f.write("\n".join(unclassified_log))
 
     print(f"✅ 分类完成！共整理出 {len(categorized_bookmarks)} 个有效书签。")
     
     structured_data = build_structure(categorized_bookmarks)
+    
+    # 打印统计信息
+    print_statistics(structured_data, len(all_links), len(seen_urls))
     
     print(f"📝 正在生成 Markdown 输出: {output_md_file}")
     generate_markdown(structured_data, output_md_file)

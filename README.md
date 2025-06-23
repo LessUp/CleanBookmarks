@@ -1,49 +1,49 @@
-# 书签管家 (Bookmark Steward)
+# Bookmark Steward
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-一个能自动合并、清理和分类浏览器书签的 Python 脚本。
-**本项目的核心是一套开放的、由社区驱动的分类规则库 (`config.json`)**，它驱动一个基于权重评分的智能引擎，旨在成为最全面、最合理的书签自动整理方案。
+A Python script that automatically merges, cleans, and categorizes browser bookmarks.
+**The core of this project is an open, community-driven rules library (`config.json`)** that powers a weight-based intelligent engine, aiming to be the most comprehensive and rational solution for automatic bookmark organization.
 
-## ✨ 主要特性
+## ✨ Key Features
 
-- **基于权重的智能评分引擎**：告别简单的关键词匹配！本工具会对书签的域名、URL、标题等信息进行综合评估，为每个可能的分类计算得分，并选择得分最高的分类作为最终归宿，极大提升了分类的准确性和合理性。
-- **社区驱动的规则库**：核心 `config.json` 文件开放、可协作。我们鼓励用户贡献规则，共同使其不断进化，覆盖更多领域。
-- **多维度分类**：同时根据**内容格式**（视频、文档、代码库）和**内容主题**（技术、设计、新闻）进行精细分类。
-- **多策略管理**：支持创建多个 `config_*.json` 策略文件，在运行时按需选择，轻松应对不同场景（如工作、学习、个人）。
-- **自动化支持**：从自动合并、去重、URL 清理到最终生成可导入的 `HTML` 和可阅读的 `Markdown` 文件，全程自动化。
+- **Weight-Based Intelligent Scoring Engine**: Say goodbye to simple keyword matching! This tool evaluates a bookmark's domain, URL, title, and other information to calculate a score for each possible category, choosing the one with the highest score as the final destination. This significantly improves classification accuracy and rationality.
+- **Community-Driven Rule Library**: The core `config.json` file is open and collaborative. We encourage users to contribute rules to help it evolve and cover more domains.
+- **Multi-Dimensional Classification**: Finely categorizes bookmarks based on both **content format** (e.g., video, document, code repository) and **content theme** (e.g., tech, design, news).
+- **Multi-Strategy Management**: Supports creating multiple `config_*.json` strategy files, allowing you to choose the one you need at runtime to easily handle different scenarios (e.g., work, study, personal).
+- **Full Automation**: From automatic merging, deduplication, and URL cleaning to generating importable `HTML` and readable `Markdown` files, the entire process is automated.
 
-## 🚀 快速上手
+## 🚀 Quick Start
 
-**只需 3 步，即可体验强大的自动整理。**
+**Get started with powerful, automatic organization in just 3 steps.**
 
-1.  **准备项目**：克隆仓库，安装依赖。
+1.  **Prepare the Project**: Clone the repository and install dependencies.
     ```bash
     git clone https://github.com/YOUR_USERNAME/CleanBookmarks.git
     cd CleanBookmarks
     pip install -r requirements.txt
     ```
-2.  **放入书签**：将您从浏览器导出的 `.html` 书签文件全部放入 `tests/input` 文件夹。
-3.  **运行脚本**：
+2.  **Add Your Bookmarks**: Place all your exported `.html` bookmark files from your browser into the `tests/input` folder.
+3.  **Run the Script**:
     ```bash
     python src/clean&tidy.py
     ```
-    脚本将自动使用默认的 `config.json` 规则库。如果检测到多个策略文件，会提示您进行选择。整理好的文件将输出到 `tests/output` 目录。
+    The script will automatically use the default `config.json` rule library. If multiple strategy files are detected, you will be prompted to choose one. The organized files will be output to the `tests/output` directory.
 
 ---
 
-## ❤️ 贡献规则：打造最强大脑
+## ❤️ Contribute Rules: Build the Strongest Brain
 
-我们相信，最好的分类规则来自成千上万用户的真实需求。贡献规则是本项目最重要的贡献方式，且无需编写任何代码。
+We believe the best classification rules come from the real-world needs of thousands of users. Contributing rules is the most important way to contribute to this project, and it requires no coding.
 
-**贡献方式**：Fork 本项目 -> 编辑 `config.json` -> 发起 Pull Request。
+**How to Contribute**: Fork this project -> Edit `config.json` -> Create a Pull Request.
 
-### 理解规则结构
+### Understanding the Rule Structure
 
-`config.json` 的核心是 `category_rules`，它定义了主题分类的逻辑。每个分类都由一个 `rules` 数组驱动：
+The core of `config.json` is `category_rules`, which defines the logic for theme-based classification. Each category is driven by a `rules` array:
 
 ```json
-"技术栈/后端 & 数据库": {
+"Tech/Backend & Databases": {
     "rules": [
         { 
             "match": "domain", 
@@ -58,7 +58,7 @@
         },
         { 
             "match": "title", 
-            "keywords": [" go "],  // 注意 "go" 两边的空格，用于精确匹配单词
+            "keywords": [" go "],  // Note the spaces around "go" for precise word matching
             "weight": 4, 
             "must_not_contain": ["go out", "go shopping"] 
         }
@@ -66,19 +66,19 @@
 }
 ```
 
-- `match`: 指定匹配对象，可以是 `domain` (域名), `url` (完整链接) 或 `title` (标题)。
-- `keywords`: 关键词列表。
-- `weight`: **权重**。这是智能评分的核心。**域名匹配的权重通常应该最高**，因为它最准确。标题匹配的权重应相对较低。
-- `must_not_contain`: **排除词列表**。如果匹配对象中出现了这里的任何一个词，该条规则将不计分。这对于消除歧义至关重要（例如，区分编程语言 `Rust` 和游戏 `Rust`）。
+- `match`: Specifies the target to match, can be `domain`, `url` (full link), or `title`.
+- `keywords`: A list of keywords.
+- `weight`: **The core of the intelligent scoring.** **Domain matches should typically have the highest weight** as they are the most accurate. Title matches should have a relatively lower weight.
+- `must_not_contain`: **A list of exclusion words.** If any of these words appear in the matched target, this rule will be ignored (score of zero). This is crucial for eliminating ambiguity (e.g., distinguishing the programming language `Rust` from the game `Rust`).
 
-您可以修改现有规则，或仿照此结构添加全新的分类，让我们的"大脑"更聪明！
+You can modify existing rules or add new categories following this structure to make our "brain" smarter!
 
-## 🛠️ 进阶使用：多策略管理
+## 🛠️ Advanced Usage: Multi-Strategy Management
 
-您可以创建多个 `config_*.json` 文件（例如 `config_work.json`, `config_personal.json`），每个文件代表一套独立的分类策略。
+You can create multiple `config_*.json` files (e.g., `config_work.json`, `config_personal.json`), with each file representing a separate set of classification strategies.
 
-当您直接运行脚本时，它会自动检测这些文件，并提供一个菜单让您选择本次要使用的策略（直接回车可选用默认的 `config.json`）。您也可以通过 `--config` 参数强制指定一个配置文件。
+When you run the script directly, it will automatically detect these files and provide a menu for you to select the strategy for the current session (press Enter to use the default `config.json`). You can also force a specific configuration file using the `--config` parameter.
 
-## 📜 许可证
+## 📜 License
 
-本项目采用 [MIT 许可证](LICENSE)。 
+This project is licensed under the [MIT License](LICENSE). 
