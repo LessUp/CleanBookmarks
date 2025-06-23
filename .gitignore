@@ -73,4 +73,8 @@ target/
 
 # Other
 *.local
-.DS_Store 
+.DS_Store
+
+# Custom
+# Ignore generated output files
+/tests/output/ 

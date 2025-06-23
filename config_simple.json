@@ -1,0 +1,25 @@
+{
+    "processing_order": [
+        "format_rules",
+        "category_rules"
+    ],
+    "format_rules": {
+        "媒体": {
+            "domains": ["youtube.com", "bilibili.com", "spotify.com"]
+        },
+        "文档": {
+            "url_ends_with": [".pdf", ".doc", ".pptx"]
+        }
+    },
+    "category_rules": {
+        "技术": {
+            "keywords": ["github.com", "stackoverflow.com", "dev.to", "juejin.cn"]
+        },
+        "购物": {
+            "keywords": ["amazon.com", "jd.com", "taobao.com"]
+        },
+        "新闻": {
+            "keywords": ["news", "reuters", "theverge"]
+        }
+    }
+} 

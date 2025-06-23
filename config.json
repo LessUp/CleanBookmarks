@@ -1,80 +1,146 @@
 {
-  "categories": {
-    "工作台": {
-      "keywords": [],
-      "sub_categories": {
-        "BGI 内部": {
-          "keywords": [
-            "bgi.com", "genomics.cn", "zhixueyun.com", "bugtrace.it.bgi",
-            "bgioa.genomics.cn", "dingtalk.com", "wiki.it.bgi.com",
-            "git.bgi.com", "mail.genomics.cn", "halos.bgi"
-          ]
-        }
-      }
+  "processing_order": [
+    "special_domain_rules",
+    "format_rules",
+    "read_later_rules",
+    "category_rules"
+  ],
+  "special_domain_rules": {
+    "技术栈/代码 & 开源/GitHub": {
+      "domains": ["github.com"],
+      "split_by_path_segment": 1
     },
-    "生物信息": {
-      "keywords": [],
-      "sub_categories": {
-        "流程与工具": {
-          "keywords": [
-            "gatk", "picard", "samtools", "bwa", "fastqc", "nextflow",
-            "snakemake", "bioconda", "workflow"
-          ]
-        },
-        "数据库": {
-          "keywords": [
-            "ncbi", "ensembl", "ucsc", "cngb", "cngbdb", "genome.ucsc",
-            "db.cngb.org"
-          ]
-        },
-        "社区 & 博客": {
-          "keywords": ["biostar", "broadinstitute", "seqanswers", "omictools"]
-        }
-      }
-    },
-    "AI 研究室": {
-      "keywords": [],
-      "sub_categories": {
-        "对话 & 写作": {"keywords": ["chatgpt", "chat.bgi", "chat01.ai", "notebooklm", "rawchat", "poloai.top", "saas.ai1.bar"]},
-        "图像 & 视频": {"keywords": ["styleai.art", "animatediff", "ghibliai.net", "labs.google", "image-fx"]},
-        "学习 & 平台": {"keywords": ["deep-ml.com", "aider.chat", "astralapp", "yunwu.ai"]}
-      }
-    },
-    "技术栈": {
-      "keywords": [],
-      "sub_categories": {
-        "代码 & 开源": {"keywords": ["github.com"]},
-        "社区 & 博客": {"keywords": ["linux.do", "zishu.me", "appinn.com", "nsringo.github.io", "v2ex.com", "yuque.com", "luochang.ink", "osssr.com", "mcpservers.org"]},
-        "开发工具": {"keywords": ["mianshiya.com", "ckey.run", "cloudconvert.com", "ping0.cc", "voo.works", "caddyserver.com"]},
-        "DevOps": {"keywords": ["docker.com", "kubernetes.io", "helm.sh"]},
-        "学习资料": {"keywords": ["software-engineering-at-google", "eloquentjavascript", "eloquent javascript"]}
-      }
-    },
-    "效率工具": {
-      "keywords": [],
-      "sub_categories": {
-        "文件 & 转换": {"keywords": ["cloudconvert", "ping0.cc", "convert", "voo.works", "ckey.run", "pintree.io", "pdf2docx", "aipdf.app", "deeplx"]},
-        "设备 & 管理": {"keywords": ["logiwebconnect.com"]},
-        "云盘 & 同步": {"keywords": ["nextcloud", "onedrive", "dropbox", "sharepoint", "owncloud"]}
-      }
-    },
-    "学习 & 阅读": {
-      "keywords": [],
-      "sub_categories": {
-        "电子书 & 文档": {"keywords": ["book", "pdf", "handbook", "guide", "docs", "ebook"]},
-        "文章 & 报告": {"keywords": ["arstechnica", "blog", "overreacted", "medium.com", "news.ycombinator", "weekly", "report", "arxiv.org", "yuque.com"]}
-      }
-    },
-    "休闲娱乐": {
-      "keywords": ["hupu.com", "momoyu.cc", "patreon.com", "poolhub.me", "play.google.com", "gying.si", "slowread.net", "kuakua.app"],
-      "sub_categories": {}
+    "技术栈/云服务 & DevOps": {
+      "domains": ["docker.com", "kubernetes.io", "helm.sh", "circleci.com", "travis-ci.org"]
     }
   },
-  "domain_based_subcats": [
-    ["技术栈", "社区 & 博客"],
-    ["技术栈", "开发工具"],
-    ["AI 研究室", "学习 & 平台"],
-    ["AI 研究室", "对话 & 写作"],
-    ["学习 & 阅读", "文章 & 报告"]
-  ]
+  "format_rules": {
+    "媒体库/视频": {
+      "domains": [
+        "youtube.com", "youtu.be",
+        "vimeo.com",
+        "bilibili.com",
+        "ted.com"
+      ],
+      "url_contains": []
+    },
+    "媒体库/音乐与播客": {
+      "domains": [
+        "spotify.com",
+        "soundcloud.com",
+        "music.apple.com",
+        "music.163.com"
+      ],
+      "url_contains": []
+    },
+    "资料库/幻灯片": {
+      "domains": [
+        "slides.com",
+        "speakerdeck.com",
+        "slideshare.net"
+      ],
+      "url_contains": [
+        "docs.google.com/presentation"
+      ]
+    },
+    "资料库/文档": {
+      "domains": [],
+      "url_contains": [],
+      "url_ends_with": [
+        ".pdf", ".epub", ".mobi",
+        ".docx", ".pptx", ".doc", ".xls", ".xlsx"
+      ]
+    },
+    "效率工具/在线应用": {
+      "domains": [
+        "figma.com", "framer.com",
+        "canva.com",
+        "miro.com",
+        "excalidraw.com",
+        "regex101.com",
+        "codesandbox.io", "codepen.io", "replit.com",
+        "tinypng.com", "tinyjpg.com",
+        "tldraw.com"
+      ],
+      "url_contains": []
+    }
+  },
+  "read_later_rules": {
+    "domains": [
+      "medium.com", "dev.to", "freecodecamp.org", "hashnode.com",
+      "hackernoon.com", "dzone.com", "infoq.com", "juejin.cn", "segmentfault.com",
+      "stackoverflow.com", "stackexchange.com", "martinfowler.com", "css-tricks.com", 
+      "smashingmagazine.com", "thenewstack.io", "techcrunch.com", "stratechery.com", 
+      "news.ycombinator.com", "baeldung.com", "geeksforgeeks.org", "tutorialspoint.com", 
+      "w3schools.com", "towardsdatascience.com", "zhihu.com", "yuque.com", "jianshu.com"
+    ],
+    "keywords_in_title": [
+      "blog", "article", "post", "tutorial", "guide", "cheatsheet", "deep-dive",
+      "文章", "教程", "指南", "博客", "分享", "解析", "实践", "入门"
+    ],
+    "path_restrictions": {
+      "zhihu.com": ["/p/", "/column/"],
+      "yuque.com": ["/docs/", "/posts/"]
+    }
+  },
+  "category_rules": {
+    "技术栈/云服务 & DevOps": {
+      "keywords": [
+        "aws", "amazon", "google cloud", "gcp", "azure", "microsoft", 
+        "docker", "kubernetes", "helm", "terraform", "ansible",
+        "vercel", "netlify", "cloudflare", "heroku"
+      ]
+    },
+    "技术栈/Web 开发": {
+      "keywords": [
+        "react", "vue", "angular", "svelte", "next.js", "nuxt.js",
+        "webpack", "vite", "css", "html", "javascript", "typescript",
+        "nodejs", "deno", "express"
+      ]
+    },
+    "技术栈/后端 & 数据库": {
+      "keywords": [
+        "python", "django", "flask", "fastapi",
+        "rust", "golang", "go",
+        "java", "spring",
+        "sql", "mysql", "postgresql", "sqlite", "mongodb", "redis"
+      ]
+    },
+    "技术栈/AI & 数据科学": {
+      "keywords": [
+        "tensorflow", "pytorch", "keras", "scikit-learn", "pandas", "numpy",
+        "jupyter", "colab", "kaggle",
+        "openai", "claude", "gemini", "huggingface", "llama", "mistral"
+      ]
+    },
+    "技术栈/综合": {
+      "keywords": [
+        "stackoverflow.com",
+        "github.com",
+        "dev.to",
+        "medium.com",
+        "juejin.cn",
+        "segmentfault.com"
+      ]
+    },
+    "设计 & 创意": {
+      "keywords": [
+        "dribbble.com",
+        "behance.net",
+        "pinterest.com",
+        "design"
+      ]
+    },
+    "新闻 & 资讯": {
+      "keywords": [
+        "news.ycombinator.com",
+        "techcrunch.com",
+        "theverge.com",
+        "reuters.com",
+        "bloomberg.com",
+        "wsj.com"
+      ]
+    }
+  },
+  "domain_based_subcats": []
 } 
