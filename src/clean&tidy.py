@@ -19,20 +19,52 @@ from bs4 import BeautifulSoup, Doctype
 import time
 from urllib.parse import urlparse
 from collections import Counter
+from functools import lru_cache
+
+@lru_cache(maxsize=200_000)
+def _parse_url_cached(url: str):
+    """带 LRU 缓存的 urlparse，加速重复解析"""
+    return urlparse(url)
+
 
 def clean_url(raw_url: str) -> str:
     """去除查询参数与锚点，返回净化后的 URL"""
     if not raw_url:
         return ""
-    parts = urlparse(raw_url)
+    parts = _parse_url_cached(raw_url)
     cleaned = f"{parts.scheme}://{parts.netloc}{parts.path}"
     return cleaned.rstrip("/")
+
+
+def clean_title(title, config):
+    """根据配置清理书签标题"""
+    # 如果没有配置规则，直接返回原标题
+    cleaning_rules = config.get("title_cleaning_rules")
+    if not cleaning_rules:
+        return title
+
+    # 1. 移除前缀
+    for prefix in cleaning_rules.get("prefixes", []):
+        if title.startswith(prefix):
+            title = title[len(prefix):].lstrip()
+
+    # 2. 移除后缀
+    for suffix in cleaning_rules.get("suffixes", []):
+        if title.endswith(suffix):
+            title = title[:-len(suffix)].rstrip()
+
+    # 3. 执行替换
+    for old, new in cleaning_rules.get("replacements", {}).items():
+        title = title.replace(old, new)
+
+    return title.strip()
 
 
 def classify_bookmark(url, title, seen_urls, config):
     """
     根据配置文件的规则对单个书签进行分类。
-    这是一个完全由配置驱动的通用分类引擎。
+    这是一个采用"全局评分模型"的、完全由配置驱动的通用分类引擎。
+    所有规则都会为可能的分类贡献分数，最终选择得分最高的分类。
 
     Args:
         url (str): 书签的 URL。
@@ -44,7 +76,7 @@ def classify_bookmark(url, title, seen_urls, config):
         tuple or None: 如果书签是唯一的，则返回一个元组，
                        第一个元素是分类路径（字符串或元组），
                        第二个元素是 (URL, 标题) 元组。
-                       如果书签重复，则返回 (None, None)。
+                       如果书签重复或无有效分类，则返回 (None, None)。
     """
     if not url:
         return None, None
@@ -55,11 +87,14 @@ def classify_bookmark(url, title, seen_urls, config):
     seen_urls.add(cleaned_url)
 
     lower_title = title.lower()
-    parsed = urlparse(url)
+    parsed = _parse_url_cached(url)
     domain = parsed.netloc.lower()
     path_parts = [p for p in parsed.path.split("/") if p]
     
-    # 按照 processing_order 中定义的顺序执行分类
+    # 初始化所有可能分类的分数
+    scores = {}
+    
+    # 按照 processing_order 中定义的顺序执行计分
     for rule_type in config.get("processing_order", []):
         
         # --- 1. 特殊域名规则处理器 ---
@@ -67,51 +102,70 @@ def classify_bookmark(url, title, seen_urls, config):
             rules = config.get("special_domain_rules", {})
             for category_path_str, rule in rules.items():
                 category_path = tuple(category_path_str.split('/'))
+                weight = rule.get("weight", 5) # 域名匹配权重较高
                 if any(d in domain for d in rule.get("domains", [])):
+                    scores.setdefault(category_path, 0)
                     # 检查是否需要按路径分割
                     if "split_by_path_segment" in rule and path_parts:
                         segment_index = rule["split_by_path_segment"] - 1
                         if segment_index < len(path_parts):
                             dynamic_part = path_parts[segment_index]
-                            return category_path + (dynamic_part,), (url, title)
-                    return category_path, (url, title)
+                            dynamic_category_path = category_path + (dynamic_part,)
+                            scores.setdefault(dynamic_category_path, 0)
+                            scores[dynamic_category_path] += weight
+                        else: # 路径不满足，则按基础路径加分
+                            scores[category_path] += weight
+                    else:
+                        scores[category_path] += weight
 
         # --- 2. 内容格式规则处理器 ---
         elif rule_type == "format_rules":
             rules = config.get("format_rules", {})
             for category_path_str, rule in rules.items():
                 category_path = tuple(category_path_str.split('/'))
+                weight = rule.get("weight", 10) # 格式匹配权重最高
+                matched = False
                 if any(d in domain for d in rule.get("domains", [])):
-                    return category_path, (url, title)
-                if any(c in url for c in rule.get("url_contains", [])):
-                    return category_path, (url, title)
-                if any(url.lower().endswith(e) for e in rule.get("url_ends_with", [])):
-                    return category_path, (url, title)
+                    matched = True
+                if not matched and any(c in url for c in rule.get("url_contains", [])):
+                    matched = True
+                if not matched and any(url.lower().endswith(e) for e in rule.get("url_ends_with", [])):
+                    matched = True
+                
+                if matched:
+                    scores.setdefault(category_path, 0)
+                    scores[category_path] += weight
 
         # --- 3. "稍后阅读"规则处理器 ---
         elif rule_type == "read_later_rules":
             rule = config.get("read_later_rules", {})
+            category_path_str = rule.get("category_name", "稍后阅读")
+            category_path = tuple(category_path_str.split('/'))
+            weight = rule.get("weight", 20) # 稍后阅读具有高优先级
+            matched = False
             # 域名匹配
             if any(d in domain for d in rule.get("domains", [])):
                 # 检查路径限制
                 restrictions = rule.get("path_restrictions", {})
                 if domain in restrictions:
                     if any(p in url for p in restrictions[domain]):
-                        return "稍后阅读", (url, title)
-                else: # 没有路径限制，直接分类
-                    return "稍后阅读", (url, title)
+                        matched = True
+                else: # 没有路径限制，直接匹配
+                    matched = True
             # 标题关键词匹配
-            if any(kw in lower_title for kw in rule.get("keywords_in_title", [])):
-                return "稍后阅读", (url, title)
+            if not matched and any(kw in lower_title for kw in rule.get("keywords_in_title", [])):
+                matched = True
+            
+            if matched:
+                scores.setdefault(category_path, 0)
+                scores[category_path] += weight
 
         # --- 4. 通用分类规则处理器 (基于权重评分) ---
         elif rule_type == "category_rules":
             rules_config = config.get("category_rules", {})
-            scores = {}
-
             for category_path_str, category_data in rules_config.items():
                 category_path = tuple(category_path_str.split('/'))
-                scores[category_path] = 0
+                scores.setdefault(category_path, 0)
                 
                 for rule in category_data.get("rules", []):
                     weight = rule.get("weight", 1)
@@ -136,12 +190,33 @@ def classify_bookmark(url, title, seen_urls, config):
                         
                         scores[category_path] += weight
 
-            # 找出得分最高的分类
-            if any(s > 0 for s in scores.values()):
-                best_category = max(scores, key=scores.get)
-                # 可选：设置一个阈值，防止低分误匹配
-                if scores[best_category] > 0:
-                    return best_category, (url, title)
+    # --- 全局评分结束，选出最优分类 ---
+    if not scores:
+        return "未分类", (url, title)
+
+    best_category = max(scores, key=scores.get)
+    highest_score = scores[best_category]
+    
+    # 获取该分类的最低分数阈值
+    category_path_str = '/'.join(best_category)
+    # 在 category_rules 中寻找阈值定义
+    min_score = config.get("category_rules", {}).get(category_path_str, {}).get("min_score", 0)
+
+    # 如果在 category_rules 中没找到，可能是在其他规则类型中定义的
+    if min_score == 0:
+        for rule_type in ["special_domain_rules", "format_rules", "read_later_rules"]:
+            rules = config.get(rule_type, {})
+            # 注意: "read_later_rules" 结构不同，需要单独处理
+            if rule_type == "read_later_rules":
+                 if rules.get("category_name", "稍后阅读") == category_path_str:
+                    min_score = rules.get("min_score", 0)
+                    break
+            elif category_path_str in rules:
+                min_score = rules.get(category_path_str, {}).get("min_score", 0)
+                break
+
+    if highest_score > min_score:
+        return best_category, (url, title)
 
     return "未分类", (url, title)
 
@@ -217,20 +292,34 @@ def build_structure(categorized_bookmarks):
 
 
 def generate_markdown(structured_bookmarks, md_file):
-    """递归生成 Markdown 文件"""
+    """递归生成具有标准多级标题和排序的 Markdown 文件"""
     lines = []
 
     def walk(node, depth=0):
-        indent = "  " * depth
-        for key, value in sorted(node.items()):
-            if key == "_items":
-                for url, title in value:
-                    lines.append(f"{indent}- [{title}]({url})")
-                continue
-            lines.append(f"{indent}### {key}" if depth == 0 else f"{indent}- **{key}**")
+        # 对当前节点的所有键（子目录和 _items）进行排序，确保输出顺序稳定
+        # 将 _items 单独处理，其他键（子目录）按字母顺序排序
+        sorted_keys = sorted([k for k in node.keys() if k != "_items"])
+
+        # 1. 首先处理当前层级的所有子目录
+        for key in sorted_keys:
+            value = node[key]
+            # 动态生成标题级别, 例如 #, ##, ###
+            # 为了美观和兼容性，限制最大标题级别到 H4 (####)
+            heading_level = min(depth + 1, 4)
+            heading_prefix = "#" * heading_level
+            lines.append(f"\n{heading_prefix} {key}\n")
             walk(value, depth + 1)
 
-    walk(structured_bookmarks)
+        # 2. 然后处理当前层级的所有书签项
+        if "_items" in node:
+            # 对当前层级的书签按标题进行排序
+            sorted_items = sorted(node["_items"], key=lambda item: item[1])
+            for url, title in sorted_items:
+                # 书签使用无序列表格式
+                lines.append(f"- [{title}]({url})")
+
+    # 从顶层开始遍历，初始深度为0
+    walk(structured_bookmarks, depth=0)
     with open(md_file, "w", encoding="utf-8") as f:
         f.write("\n".join(lines))
 
@@ -317,7 +406,7 @@ def print_statistics(structured_data, total_links_found, unique_links_count):
             if not isinstance(node, dict): return
             for url, title in node.get("_items", []):
                 try:
-                    all_domains.append(urlparse(url).netloc.lower())
+                    all_domains.append(_parse_url_cached(url).netloc.lower())
                 except:
                     pass # 忽略无法解析的URL
             for key, value in node.items():
@@ -492,13 +581,17 @@ def main():
         if url and title:
             category, item = classify_bookmark(url, title.strip(), seen_urls, config)
             if category and item:
-                categorized_bookmarks.append((category, item))
+                # item 是一个元组 (cleaned_url, original_title)
+                cleaned_url, original_title = item
+                cleaned_title = clean_title(original_title, config)
+                categorized_bookmarks.append((category, (cleaned_url, cleaned_title)))
                 if category == "未分类":
+                    # 日志中记录原始的 URL 和标题，便于调试
                     unclassified_log.append(f"{url} | {title.strip()}")
 
     if unclassified_log:
         log_file_path = "unclassified_log.txt"
-        print(f"ℹ️  正在将 {len(unclassified_log)} 个未分类书签写入日志: {log_file_path}")
+        print(f"正在将 {len(unclassified_log)} 个未分类书签写入日志: {log_file_path}")
         with open(log_file_path, "w", encoding="utf-8") as f:
             f.write("\n".join(unclassified_log))
 

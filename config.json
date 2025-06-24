@@ -1,4 +1,40 @@
 {
+  "title_cleaning_rules": {
+    "prefixes": [
+      "登录 |",
+      "Sign in ·",
+      "登录 "
+    ],
+    "suffixes": [
+      "| ZAPRO · 杂铺",
+      "--- The Cohere Platform",
+      "| MyFreeMP3",
+      "- V2EX",
+      "| 静晴轩别苑",
+      "| 醉渔小站",
+      "· 钉钉文档",
+      "- LUSH产品手册 - Wiki",
+      "| Microsoft Learn",
+      "| CodiumAI",
+      "· GitHub",
+      "- LINUX DO",
+      "| Vben Admin",
+      "- The Rust Programming Language",
+      "| The Company of Biologists",
+      "| bioRxiv",
+      "– The Huttenhower Lab",
+      "| Google AI Developers Forum",
+      "| GORM - The fantastic ORM library for Golang, aims to be developer friendly."
+    ],
+    "replacements": {
+      "&amp;": "&",
+      "&lt;": "<",
+      "&gt;": ">",
+      "--- ": "- ",
+      " - 知乎": "",
+      " - 简书": ""
+    }
+  },
   "processing_order": [
     "special_domain_rules",
     "format_rules",
@@ -16,6 +52,31 @@
     },
     "技术栈/云服务 & DevOps": {
       "domains": ["docker.com", "kubernetes.io", "helm.sh", "circleci.com", "travis-ci.org"]
+    },
+    "AI 研究室/论文 & 会议": {
+      "domains": ["arxiv.org", "paperswithcode.com", "nips.cc", "icml.cc", "cvf-openaccess.thecvf.com"],
+      "weight": 10,
+      "min_score": 5
+    },
+    "技术栈/Github": {
+      "domains": ["github.com"],
+      "split_by_path_segment": 1,
+      "weight": 5
+    },
+    "技术栈/开源社区": {
+      "domains": ["huggingface.co", "oschina.net", "codeproject.com"],
+      "weight": 8,
+      "min_score": 5
+    },
+    "工作台/司内业务": {
+      "domains": [
+        "zego.im", 
+        "zego.cloud", 
+        "coding.zego.cloud", 
+        "confluence.zego.cloud"
+      ],
+      "weight": 15,
+      "min_score": 10
     }
   },
   "format_rules": {
@@ -83,9 +144,68 @@
         "iobit.com", "raycast.com", "keep.google.com", "wanzhi.com", "indiehackertools.net"
       ],
       "url_contains": []
+    },
+    "学习 & 阅读/文档 & 速查表": {
+      "domains": ["docs.rs", "devdocs.io"],
+      "url_ends_with": [".pdf"],
+      "weight": 15,
+      "min_score": 10
+    },
+    "效率工具/编辑与格式化": {
+      "min_score": 3,
+      "rules": [
+        {
+          "match": "domain",
+          "keywords": ["jsoneditoronline.org", "bejson.com", "jsonmatic.com"],
+          "weight": 8
+        }
+      ]
+    },
+    "效率工具/性能分析": {
+      "min_score": 4,
+      "rules": [
+        {
+          "match": "title",
+          "keywords": ["profiler", "vtune", "performance"],
+          "weight": 6
+        }
+      ]
+    },
+    "效率工具/笔记与知识管理": {
+      "min_score": 3,
+      "rules": [
+        {
+          "match": "domain",
+          "keywords": ["remnote.com"],
+          "weight": 5
+        }
+      ]
+    },
+    "休闲娱乐/导航与聚合": {
+      "min_score": 2,
+      "rules": [
+        {
+          "match": "domain",
+          "keywords": ["m.vieg.net", "guozhivip.com"],
+          "weight": 3
+        }
+      ]
+    },
+    "生活 & 服务/常用网站": {
+      "min_score": 2,
+      "rules": [
+        {
+          "match": "domain",
+          "keywords": ["baidu.com", "bing.com", "sogou.com", "so.com", "sina.com.cn", "apple.com", "icloud.com"],
+          "weight": 3
+        }
+      ]
     }
   },
   "read_later_rules": {
+    "category_name": "学习 & 阅读/稍后阅读",
+    "weight": 20,
+    "min_score": 15,
     "domains": [
       "medium.com", "dev.to", "freecodecamp.org", "hashnode.com",
       "hackernoon.com", "dzone.com", "infoq.com", "juejin.cn", "segmentfault.com",
@@ -96,9 +216,13 @@
       "评测", "体验"
     ],
     "keywords_in_title": [
-      "blog", "article", "post", "tutorial", "guide", "cheatsheet", "deep-dive",
-      "评测", "体验", "文章", "教程", "指南", "博客", "分享", "解析", "实践", "入门",
-      "招聘", "求职", "career", "hiring", "job"
+      "教程",
+      "指南",
+      "入门",
+      "实践",
+      "实战",
+      "详解",
+      "案例"
     ],
     "path_restrictions": {
       "zhihu.com": ["/p/", "/column/"],
@@ -112,6 +236,70 @@
       "dianping.com": [],
       "meituan.com": [],
       "12306.cn": []
+    },
+    "技术栈/编程语言/Python": {
+      "min_score": 5,
+      "rules": [
+        {
+          "match": "title",
+          "keywords": ["python", "pandas", "numpy", "jupyter"],
+          "weight": 5
+        },
+        {
+          "match": "url",
+          "keywords": ["python"],
+          "weight": 3
+        }
+      ]
+    },
+    "技术栈/编程语言/Go": {
+      "min_score": 3,
+      "rules": [
+        {
+          "match": "domain",
+          "keywords": ["gin-gonic.com", "talkgo.org", "gobyexample.com"],
+          "weight": 8
+        },
+        {
+          "match": "title",
+          "keywords": ["golang", " go "],
+          "weight": 5
+        }
+      ]
+    },
+    "技术栈/技术博客与社区": {
+      "min_score": 3,
+      "rules": [
+        {
+          "match": "domain",
+          "keywords": ["coolshell.cn", "eddycjy.com", "learnku.com", "overreacted.io", "engineeringblogs.xyz", "zishu.me", "csdn.net", "cnblogs.com", "juejin.cn", "segmentfault.com", "oschina.net", "infoq.com"],
+          "weight": 5
+        }
+      ]
+    },
+    "技术栈/Web开发": {
+      "rules": [
+        {
+          "match": "title",
+          "keywords": ["react", "vue", "angular", "webpack", "nodejs", "css", "html", "frontend", "backend", "echarts"],
+          "weight": 5
+        }
+      ]
+    },
+    "生物信息/基因组学": {
+      "rules": [
+        {
+          "match": "title",
+          "keywords": ["genome", "genomics", "gwas", "vcf", "bam", "基因组", "qiime2", "megan", "gatk"],
+          "must_not_contain": ["job", "career"],
+          "weight": 10
+        },
+        {
+          "match": "title",
+          "keywords": ["bioinformatics", "computational biology", "生物信息"],
+          "weight": 8
+        }
+      ]
     }
   },
   "category_rules": {
@@ -174,7 +362,7 @@
     },
     "资料库": {
       "rules": [
-        { "match": "domain", "keywords": ["greenteapress.com", "udlbook.github.io", "kancloud.cn", "readthedocs.io", "wtf.academy", "oi-wiki.org", "hello-algo.com", "annas-archive.org", "ituring.com.cn", "norvig.com", "ocw.mit.edu", "szsyw.cn", "qiangmzsx.github.io", "codeforces.com", "zh.d2l.ai", "nayuki.io", "wiki.decohack.com"], "weight": 8 },
+        { "match": "domain", "keywords": ["greenteapress.com", "udlbook.github.io", "kancloud.cn", "readthedocs.io", "wtf.academy", "oi-wiki.org", "hello-algo.com", "annas-archive.org", "ituring.com.cn", "norvig.com", "ocw.mit.edu", "szsyw.cn", "qiangmzsx.github.io", "codeforces.com", "zh.d2l.ai", "nayuki.io", "wiki.decohack.com", "runoob.com", "imooc.com", "gitbook.com", "bookstack.cn"], "weight": 8 },
         { "match": "title", "keywords": ["book", "笔记", "教程", "documentation", "spec", "幻灯片", "文档", "文件", "wiki", "手册"], "weight": 5 }
       ]
     },

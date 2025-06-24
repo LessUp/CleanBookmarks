@@ -77,4 +77,5 @@ target/
 
 # Custom
 # Ignore generated output files
-/tests/output/ 
+tests/input/*
+tests/output/*
