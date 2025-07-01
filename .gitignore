@@ -79,3 +79,4 @@ target/
 # Ignore generated output files
 tests/input/*
 tests/output/*
+unclassified_log.txt

@@ -16,6 +16,7 @@ import argparse
 import json
 import re
 import glob
+import html
 from bs4 import BeautifulSoup, Doctype
 import time
 from urllib.parse import urlparse
@@ -64,10 +65,54 @@ def clean_title(title, config):
     return title.strip()
 
 
+# --- 分类器匹配逻辑 ---
+
+def _match_keyword(target_str, rule, bookmark_context):
+    """通用关键词匹配逻辑"""
+    keywords = rule.get("keywords", [])
+    not_keywords = rule.get("must_not_contain", [])
+    match_all = rule.get("match_all_keywords_in", {})
+
+    if any(kw in target_str for kw in keywords):
+        if any(nkw in target_str for nkw in not_keywords):
+            return False
+
+        all_matched = True
+        for target, kws in match_all.items():
+            target_str_for_all = bookmark_context.get(target, "")
+            if not all(kw in target_str_for_all for kw in kws):
+                all_matched = False
+                break
+        return all_matched
+    return False
+
+def _match_simple_lookup(target_str, rule, bookmark_context):
+    return _match_keyword(target_str, rule, bookmark_context)
+
+def _match_url_starts_with(target_str, rule, bookmark_context):
+    return any(target_str.startswith(kw) for kw in rule.get("keywords", []))
+
+def _match_url_ends_with(target_str, rule, bookmark_context):
+    return any(target_str.endswith(kw) for kw in rule.get("keywords", []))
+
+def _match_url_matches_regex(target_str, rule, bookmark_context):
+    return any(re.search(kw, target_str) for kw in rule.get("keywords", []))
+
+
+MATCHER_DISPATCHER = {
+    "domain": _match_simple_lookup,
+    "url": _match_simple_lookup,
+    "title": _match_simple_lookup,
+    "url_starts_with": _match_url_starts_with,
+    "url_ends_with": _match_url_ends_with,
+    "url_matches_regex": _match_url_matches_regex,
+}
+
+
 def classify_bookmark(url, title, seen_urls, config):
     """
     根据配置文件的规则对单个书签进行分类。这是一个采用"加权评分模型"的分类引擎。
-    增加了 `priority_rules` 来处理必须优先匹配的规则。
+    通过调度器模式（dispatcher pattern）实现可扩展的匹配逻辑。
     """
     if not url:
         return None, None
@@ -77,13 +122,11 @@ def classify_bookmark(url, title, seen_urls, config):
         return None, None
     seen_urls.add(cleaned_url)
 
-    lower_title = title.lower()
-    lower_url = url.lower()
-    try:
-        parsed = _parse_url_cached(url)
-        domain = parsed.netloc.lower().replace("www.", "")
-    except Exception:
-        domain = ""
+    bookmark_context = {
+        "title": title.lower(),
+        "url": url.lower(),
+        "domain": _parse_url_cached(url).netloc.lower().replace("www.", "")
+    }
 
     scores = {}
 
@@ -93,63 +136,26 @@ def classify_bookmark(url, title, seen_urls, config):
             category_weight = category_data.get("weight", default_weight)
 
             for rule in category_data.get("rules", []):
-                weight = rule.get("weight", category_weight)
-                match_target_str = ""
-                
                 match_type = rule.get("match")
-                if match_type == "domain":
-                    match_target_str = domain
-                elif match_type == "url":
-                    match_target_str = lower_url
-                elif match_type == "title":
-                    match_target_str = lower_title
-                elif match_type == "url_starts_with":
-                    if any(lower_url.startswith(kw) for kw in rule.get("keywords", [])):
-                        scores.setdefault(category_path, 0)
-                        scores[category_path] += weight
-                    continue
-                elif match_type == "url_ends_with":
-                    if any(lower_url.endswith(kw) for kw in rule.get("keywords", [])):
-                        scores.setdefault(category_path, 0)
-                        scores[category_path] += weight
-                    continue
-                elif match_type == "url_matches_regex":
-                    if any(re.search(kw, lower_url) for kw in rule.get("keywords", [])):
-                        scores.setdefault(category_path, 0)
-                        scores[category_path] += weight
-                    continue
-
-                if not match_target_str:
-                    continue
+                matcher_func = MATCHER_DISPATCHER.get(match_type)
                 
-                # 关键词匹配
-                keywords = rule.get("keywords", [])
-                not_keywords = rule.get("must_not_contain", [])
-                match_all = rule.get("match_all_keywords_in", {})
+                if not matcher_func:
+                    continue
 
-                if any(kw in match_target_str for kw in keywords):
-                    if any(nkw in match_target_str for nkw in not_keywords):
-                        continue
-                    
-                    # 检查是否需要匹配所有附加关键词
-                    all_matched = True
-                    for target, kws in match_all.items():
-                        target_str = ""
-                        if target == "title": target_str = lower_title
-                        elif target == "url": target_str = lower_url
-                        
-                        if not all(kw in target_str for kw in kws):
-                           all_matched = False
-                           break
-                    
-                    if all_matched:
-                        scores.setdefault(category_path, 0)
-                        scores[category_path] += weight
+                # 从上下文中获取当前规则需要匹配的目标字符串
+                # 对于 domain, url, title, 目标字符串就是其本身
+                # 对于 url_starts_with 等，目标是整个 url
+                target_key = match_type if match_type in ["domain", "title"] else "url"
+                target_str = bookmark_context.get(target_key, "")
+
+                if matcher_func(target_str, rule, bookmark_context):
+                    weight = rule.get("weight", category_weight)
+                    scores.setdefault(category_path, 0)
+                    scores[category_path] += weight
 
     # 1. 应用高优先级规则
     apply_rules(config.get("priority_rules", {}), default_weight=100)
     
-    # 如果已有高分匹配，则可能提前决定
     if scores:
         best_category_so_far = max(scores, key=scores.get)
         if scores[best_category_so_far] >= 100:
@@ -212,7 +218,7 @@ def build_structure(categorized_bookmarks, config):
     return structured
 
 
-def generate_markdown(structured_bookmarks, md_file):
+def generate_markdown(structured_bookmarks, md_file, config):
     """递归生成具有标准多级标题和排序的 Markdown 文件"""
     lines = ["# 书签整理"]
 
@@ -234,11 +240,8 @@ def generate_markdown(structured_bookmarks, md_file):
             for url, title in sorted_items:
                 lines.append(f"- [{title}]({url})")
 
-    # 从顶层开始遍历
-    top_order = [
-        "工作台", "AI", "技术栈", "生物信息", "OnlineBooks", "技术资料", 
-        "Lectures", "社区", "资讯", "求职", "娱乐", "OnlineTools", "学习", "稍后阅读", "本地网络 & 浏览器", "未分类"
-    ]
+    # 从配置加载顶层分类顺序
+    top_order = config.get("category_order", [])
 
     # 按指定顺序处理顶层分类
     for cat in top_order:
@@ -256,7 +259,7 @@ def generate_markdown(structured_bookmarks, md_file):
         f.write("\n".join(lines))
 
 
-def create_bookmark_html(structured_bookmarks, output_file):
+def create_bookmark_html(structured_bookmarks, output_file, config):
     """根据构造好的书签结构，生成 Netscape 格式的 HTML 文件。"""
     ts = str(int(time.time()))
     lines = [
@@ -269,7 +272,8 @@ def create_bookmark_html(structured_bookmarks, output_file):
 
     def write_folder(name, content_dict, indent=1):
         ind = "    " * indent
-        lines.append(f"{ind}<DT><H3 ADD_DATE=\"{ts}\" LAST_MODIFIED=\"{ts}\">{name}</H3>")
+        # 对文件夹名称进行 HTML 转义
+        lines.append(f"{ind}<DT><H3 ADD_DATE=\"{ts}\" LAST_MODIFIED=\"{ts}\">{html.escape(name)}</H3>")
         lines.append(f"{ind}<DL><p>")
         
         # 统一排序子文件夹和书签
@@ -281,17 +285,15 @@ def create_bookmark_html(structured_bookmarks, output_file):
         if "_items" in content_dict:
             sorted_items = sorted(content_dict["_items"], key=lambda item: item[1])
             for url, title in sorted_items:
-                # HTML实体编码，防止特殊字符破坏结构
-                title_encoded = title.replace('&', '&').replace('<', '<').replace('>', '>')
-                url_encoded = url.replace('&', '&')
+                # 使用 html.escape 进行安全的 HTML 实体编码
+                title_encoded = html.escape(title)
+                url_encoded = html.escape(url, quote=True)
                 lines.append(f"{ind}    <DT><A HREF=\"{url_encoded}\" ADD_DATE=\"{ts}\">{title_encoded}</A>")
 
         lines.append(f"{ind}</DL><p>")
 
-    top_order = [
-        "工作台", "AI", "技术栈", "生物信息", "OnlineBooks", "技术资料", 
-        "Lectures", "社区", "资讯", "求职", "娱乐", "OnlineTools", "学习", "稍后阅读", "本地网络 & 浏览器", "未分类"
-    ]
+    # 从配置加载顶层分类顺序
+    top_order = config.get("category_order", [])
     
     for cat in top_order:
         if cat in structured_bookmarks:
@@ -316,86 +318,9 @@ def _count_bookmarks_recursive(node):
             count += _count_bookmarks_recursive(value)
     return count
 
-def print_statistics(structured_data, total_links_found, unique_links_count):
-    """打印关于书签集合的统计信息"""
-    print("\n📊----- 书签统计信息 -----📊")
-    
-    duplicates_found = total_links_found - unique_links_count
-    print(f"✨ 去重成果: 共找到并移除了 {duplicates_found} 个重复链接。")
 
-    print("\n📚 各分类书签数量:")
-    category_counts = {}
-    all_domains = []
-    
-    def collect_stats(node, cat_name):
-        if not isinstance(node, dict): return
-        category_counts[cat_name] = category_counts.get(cat_name, 0) + len(node.get("_items", []))
-        
-        for url, _ in node.get("_items", []):
-            try:
-                all_domains.append(_parse_url_cached(url).netloc.lower().replace("www.",""))
-            except: pass
-        
-        for key, value in node.items():
-            if key != "_items":
-                collect_stats(value, f"{cat_name}/{key}")
-
-    for category, content in structured_data.items():
-        collect_stats(content, category)
-
-    if category_counts:
-        sorted_categories = sorted(category_counts.items(), key=lambda item: item[1], reverse=True)
-        for category, count in sorted_categories:
-            print(f"  - {category:<40} : {count} 个")
-
-    if all_domains:
-        print("\n🌐 您最常访问的 Top 10 网站:")
-        top_10_domains = Counter(d for d in all_domains if d).most_common(10)
-        for i, (domain, count) in enumerate(top_10_domains):
-            print(f"  {i+1}. {domain} ({count} 次)")
-        
-    print("--------------------------\n")
-
-
-def main():
-    """主函数"""
-    parser = argparse.ArgumentParser(
-        description="清理、合并并分类浏览器导出的 HTML 书签文件。",
-        formatter_class=argparse.RawTextHelpFormatter
-    )
-    # ... (命令行参数解析部分与您原文件一致，此处省略以保持简洁)
-    parser.add_argument('-i', '--input', nargs='+', default=[], help='输入的HTML书签文件路径。')
-    parser.add_argument('-c', '--config', default='config.json', help='分类规则的JSON配置文件路径。')
-    parser.add_argument('--output-html', default='tests/output/bookmarks_cleaned.html', help='输出的HTML文件路径。')
-    parser.add_argument('--output-md', default='tests/output/bookmarks.md', help='输出的Markdown文件路径。')
-    args = parser.parse_args()
-
-    input_files = args.input if args.input else glob.glob('tests/input/*.html')
-    if not input_files:
-        # 如果命令行和默认目录都没有，就使用您上传的文件名
-        if os.path.exists('bookmarks_2025_7_1.html'):
-            input_files = ['bookmarks_2025_7_1.html']
-            print(f"✅ 信息: 未找到输入文件，使用当前目录下的 'bookmarks_2025_7_1.html'")
-        else:
-            print("❌ 错误: 未找到任何输入文件。")
-            return
-    
-    config_file = args.config
-    output_html_file = args.output_html
-    output_md_file = args.output_md
-
-    output_dir = os.path.dirname(output_html_file)
-    if output_dir and not os.path.exists(output_dir):
-        os.makedirs(output_dir)
-
-    try:
-        with open(config_file, 'r', encoding='utf-8') as f:
-            config = json.load(f)
-        print(f"✅ 成功加载配置文件: {config_file}")
-    except Exception as e:
-        print(f"❌ 错误: 加载配置文件 '{config_file}' 失败: {e}")
-        return
-
+def load_bookmarks_from_files(input_files):
+    """从多个 HTML 文件中加载所有书签链接。"""
     all_links = []
     print(f"\n📖 开始处理 {len(input_files)} 个书签文件...")
     for input_file in input_files:
@@ -408,11 +333,10 @@ def main():
             print(f"   - 已读取: {input_file} (找到 {len(links)} 个链接)")
         except Exception as e:
             print(f"⚠️ 警告: 处理文件 '{input_file}' 时出错: {e}")
-    
-    if not all_links:
-        print("❌ 错误：未能在任何输入文件中找到有效的书签链接。")
-        return
+    return all_links
 
+def process_and_classify_bookmarks(all_links, config):
+    """对书签列表进行分类、去重和标题清理。"""
     print(f"\n🔍 共找到 {len(all_links)} 个书签链接（合并后）。")
     print("🚀 开始分类和去重...")
 
@@ -439,16 +363,102 @@ def main():
         print(f"⚠️ 注意: {len(unclassified_log)} 个书签被归为'未分类'，详情请见 {log_file_path}")
 
     print(f"✅ 分类完成！共整理出 {len(categorized_bookmarks)} 个有效书签。")
+    return categorized_bookmarks, seen_urls
+
+def print_statistics(structured_data, total_links_found, unique_links_count):
+    """打印关于书签集合的统计信息"""
+    print("\n--- 书签统计信息 ---")
+    
+    duplicates_found = total_links_found - unique_links_count
+    print(f"去重成果: 共找到并移除了 {duplicates_found} 个重复链接。")
+
+    print("\n各分类书签数量:")
+    category_counts = {}
+    all_domains = []
+    
+    def collect_stats(node, cat_name):
+        if not isinstance(node, dict): return
+        category_counts[cat_name] = category_counts.get(cat_name, 0) + len(node.get("_items", []))
+        
+        for url, _ in node.get("_items", []):
+            try:
+                all_domains.append(_parse_url_cached(url).netloc.lower().replace("www.",""))
+            except: pass
+        
+        for key, value in node.items():
+            if key != "_items":
+                collect_stats(value, f"{cat_name}/{key}")
+
+    for category, content in structured_data.items():
+        collect_stats(content, category)
+
+    if category_counts:
+        sorted_categories = sorted(category_counts.items(), key=lambda item: item[1], reverse=True)
+        for category, count in sorted_categories:
+            print(f"  - {category:<40} : {count} 个")
+
+    if all_domains:
+        print("\n您最常访问的 Top 10 网站:")
+        top_10_domains = Counter(d for d in all_domains if d).most_common(10)
+        for i, (domain, count) in enumerate(top_10_domains):
+            print(f"  {i+1}. {domain} ({count} 次)")
+        
+    print("--------------------\n")
+
+def main():
+    """主函数"""
+    parser = argparse.ArgumentParser(
+        description="清理、合并并分类浏览器导出的 HTML 书签文件。",
+        formatter_class=argparse.RawTextHelpFormatter
+    )
+    parser.add_argument('-i', '--input', nargs='+', default=[], help='输入的HTML书签文件路径。')
+    parser.add_argument('-c', '--config', default='config.json', help='分类规则的JSON配置文件路径。')
+    parser.add_argument('--output-html', default='tests/output/bookmarks_cleaned.html', help='输出的HTML文件路径。')
+    parser.add_argument('--output-md', default='tests/output/bookmarks.md', help='输出的Markdown文件路径。')
+    args = parser.parse_args()
+
+    input_files = args.input if args.input else glob.glob('tests/input/*.html')
+    if not input_files:
+        if os.path.exists('bookmarks_2025_7_1.html'):
+            input_files = ['bookmarks_2025_7_1.html']
+            print(f"✅ 信息: 未找到输入文件，使用当前目录下的 'bookmarks_2025_7_1.html'")
+        else:
+            print("❌ 错误: 未找到任何输入文件。")
+            return
+    
+    config_file = args.config
+    output_html_file = args.output_html
+    output_md_file = args.output_md
+
+    output_dir = os.path.dirname(output_html_file)
+    if output_dir and not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+
+    try:
+        with open(config_file, 'r', encoding='utf-8') as f:
+            config = json.load(f)
+        print(f"✅ 成功加载配置文件: {config_file}")
+    except Exception as e:
+        print(f"❌ 错误: 加载配置文件 '{config_file}' 失败: {e}")
+        return
+
+    all_links = load_bookmarks_from_files(input_files)
+    if not all_links:
+        print("❌ 错误：未能在任何输入文件中找到有效的书签链接。")
+        return
+    
+    total_links_found = len(all_links)
+    categorized_bookmarks, seen_urls = process_and_classify_bookmarks(all_links, config)
     
     structured_data = build_structure(categorized_bookmarks, config)
     
-    print_statistics(structured_data, len(all_links), len(seen_urls))
+    print_statistics(structured_data, total_links_found, len(seen_urls))
     
     print(f"📝 正在生成 Markdown 输出: {output_md_file}")
-    generate_markdown(structured_data, output_md_file)
+    generate_markdown(structured_data, output_md_file, config)
     
     print(f"🌐 正在生成 HTML 输出: {output_html_file}")
-    create_bookmark_html(structured_data, output_html_file)
+    create_bookmark_html(structured_data, output_html_file, config)
     
     print("\n🎉 全部完成！您的书签已焕然一新。")
 

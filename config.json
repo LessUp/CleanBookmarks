@@ -7,12 +7,30 @@
 
   "processing_order": ["priority_rules", "category_rules"],
 
+  "category_order": [
+    "工作台",
+    "AI",
+    "技术栈",
+    "生物信息",
+    "Books",
+    "技术资料",
+    "Lectures",
+    "社区",
+    "资讯",
+    "求职",
+    "娱乐",
+    "Utils",
+    "学习",
+    "稍后阅读",
+    "未分类"
+  ],
+
   "domain_grouping_rules": {
     "AI": ["openai.com", "deepseek.com", "chatglm.cn", "huggingface.co", "labs.google", "replicate.com", "perplexity.ai", "mistral.ai"],
     "技术栈": ["github.com", "gitlab.com", "docker.com", "kubernetes.io", "python.org", "rust-lang.org", "go.dev"],
     "生物信息": ["broadinstitute.org", "bioconda.github.io", "illumina.com", "cngb.org", "stomics.tech", "nature.com"],
     "社区": ["linux.do", "v2ex.com", "news.ycombinator.com", "reddit.com"],
-    "OnlineTools": ["figma.com", "canva.com", "deepl.com", "mermaid.live", "jsoncrack.com", "excalidraw.com"],
+    "Utils": ["figma.com", "canva.com", "deepl.com", "mermaid.live", "jsoncrack.com", "excalidraw.com"],
     "工作台": ["zego.im", "zego.cloud", "genomics.cn", "bgi.com", "dingtalk.com"]
   },
 
@@ -21,13 +39,6 @@
       "weight": 100,
       "rules": [
         { "match": "domain", "keywords": ["zego.im", "zego.cloud", "bgi.com", "genomics.cn", "dingtalk.com"] }
-      ]
-    },
-    "本地网络 & 浏览器": {
-      "weight": 100,
-      "rules": [
-        { "match": "url_starts_with", "keywords": ["chrome://", "javascript:", "about:"] },
-        { "match": "url_matches_regex", "keywords": ["^https?://(10|172|192)\\."] }
       ]
     }
   },
@@ -79,7 +90,7 @@
         { "match": "title", "keywords": ["bioinformatics", "biotool", "rna-seq", "genomics", "genome", "fastq", "sam", "vcf", "bam", "bioperl", "cell", "qiime2", "gatk", "基因组", "测序"], "weight": 15 }
       ]
     },
-    "OnlineBooks": {
+    "Books": {
       "rules": [
         { "match": "domain", "keywords": ["greenteapress.com", "udlbook.github.io", "kancloud.cn", "ituring.com.cn", "norvig.com", "hello-algo.com", "gitbook.com"], "weight": 10 },
         { "match": "title", "keywords": ["book", "手册", "指南", "tutorial"], "weight": 5 }
@@ -88,7 +99,7 @@
     "技术资料": {
       "rules": [
         { "match": "domain", "keywords": ["stackoverflow.com", "stackexchange.com", "medium.com", "dev.to", "juejin.cn", "segmentfault.com", "infoq.com", "ruanyifeng.com", "coolshell.cn", "zhile.io", "eryajf.net", "mtlynch.io", "blog.codingconfessions.com"], "weight": 10 },
-        { "match": "url_ends_with": [".pdf"], "weight": 8 }
+        { "match": "url_ends_with", "keywords": [".pdf"], "weight": 8 }
       ]
     },
     "Lectures": {
@@ -109,7 +120,7 @@
         { "match": "title", "keywords": ["news", "report", "周刊", "weekly", "日报"], "weight": 5 }
       ]
     },
-    "OnlineTools": {
+    "Utils": {
       "rules": [
         { "match": "domain", "keywords": ["deepl.com", "regex101.com", "codepen.io", "tldraw.com", "jsoncrack.com", "mermaid.live", "excalidraw.com", "star-history.com", "portableapps.com", "raycast.com"], "weight": 10 }
       ]
