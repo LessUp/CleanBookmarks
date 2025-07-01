@@ -1,427 +1,135 @@
 {
   "title_cleaning_rules": {
-    "prefixes": [
-      "登录 |",
-      "Sign in ·",
-      "登录 "
-    ],
-    "suffixes": [
-      "| ZAPRO · 杂铺",
-      "--- The Cohere Platform",
-      "| MyFreeMP3",
-      "- V2EX",
-      "| 静晴轩别苑",
-      "| 醉渔小站",
-      "· 钉钉文档",
-      "- LUSH产品手册 - Wiki",
-      "| Microsoft Learn",
-      "| CodiumAI",
-      "· GitHub",
-      "- LINUX DO",
-      "| Vben Admin",
-      "- The Rust Programming Language",
-      "| The Company of Biologists",
-      "| bioRxiv",
-      "– The Huttenhower Lab",
-      "| Google AI Developers Forum",
-      "| GORM - The fantastic ORM library for Golang, aims to be developer friendly."
-    ],
-    "replacements": {
-      "&amp;": "&",
-      "&lt;": "<",
-      "&gt;": ">",
-      "--- ": "- ",
-      " - 知乎": "",
-      " - 简书": ""
-    }
+    "prefixes": ["登录 |", "Sign in ·", "登录 "],
+    "suffixes": ["- V2EX", "· GitHub", "| Microsoft Learn", " - 知乎", " - 简书", " | 酷 壳 - CoolShell"],
+    "replacements": { "&": "&", "<": "<", ">": ">", "--- ": "- ", "(7条消息)": "" }
   },
-  "processing_order": [
-    "special_domain_rules",
-    "format_rules",
-    "read_later_rules",
-    "category_rules"
-  ],
-  "special_domain_rules": {
-    "技术栈/代码 & 开源/GitHub": {
-      "domains": ["github.com"],
-      "split_by_path_segment": 1
-    },
-    "技术栈/代码 & 开源/GitLab": {
-      "domains": ["gitlab.com"],
-      "split_by_path_segment": 1
-    },
-    "技术栈/云服务 & DevOps": {
-      "domains": ["docker.com", "kubernetes.io", "helm.sh", "circleci.com", "travis-ci.org"]
-    },
-    "AI 研究室/论文 & 会议": {
-      "domains": ["arxiv.org", "paperswithcode.com", "nips.cc", "icml.cc", "cvf-openaccess.thecvf.com"],
-      "weight": 10,
-      "min_score": 5
-    },
-    "技术栈/Github": {
-      "domains": ["github.com"],
-      "split_by_path_segment": 1,
-      "weight": 5
-    },
-    "技术栈/开源社区": {
-      "domains": ["huggingface.co", "oschina.net", "codeproject.com"],
-      "weight": 8,
-      "min_score": 5
-    },
+
+  "processing_order": ["priority_rules", "category_rules"],
+
+  "domain_grouping_rules": {
+    "AI": ["openai.com", "deepseek.com", "chatglm.cn", "huggingface.co", "labs.google", "replicate.com", "perplexity.ai", "mistral.ai"],
+    "技术栈": ["github.com", "gitlab.com", "docker.com", "kubernetes.io", "python.org", "rust-lang.org", "go.dev"],
+    "生物信息": ["broadinstitute.org", "bioconda.github.io", "illumina.com", "cngb.org", "stomics.tech", "nature.com"],
+    "社区": ["linux.do", "v2ex.com", "news.ycombinator.com", "reddit.com"],
+    "OnlineTools": ["figma.com", "canva.com", "deepl.com", "mermaid.live", "jsoncrack.com", "excalidraw.com"],
+    "工作台": ["zego.im", "zego.cloud", "genomics.cn", "bgi.com", "dingtalk.com"]
+  },
+
+  "priority_rules": {
     "工作台/司内业务": {
-      "domains": [
-        "zego.im", 
-        "zego.cloud", 
-        "coding.zego.cloud", 
-        "confluence.zego.cloud"
-      ],
-      "weight": 15,
-      "min_score": 10
-    }
-  },
-  "format_rules": {
-    "媒体库/视频": {
-      "domains": [
-        "youtube.com", "youtu.be",
-        "vimeo.com",
-        "bilibili.com",
-        "ted.com"
-      ],
-      "url_contains": []
-    },
-    "媒体库/音乐与播客": {
-      "domains": [
-        "spotify.com",
-        "soundcloud.com",
-        "music.apple.com",
-        "music.163.com",
-        "podcasts.google.com"
-      ],
-      "url_contains": []
-    },
-    "资料库/幻灯片": {
-      "domains": [
-        "slides.com",
-        "speakerdeck.com",
-        "slideshare.net"
-      ],
-      "url_contains": [
-        "docs.google.com/presentation"
-      ]
-    },
-    "资料库/协作文档": {
-      "domains": ["notion.so", "docs.google.com", "feishu.cn", "yuque.com"]
-    },
-    "资料库/文件": {
-      "url_ends_with": [
-        ".pdf", ".epub", ".mobi",
-        ".docx", ".pptx", ".doc", ".xls", ".xlsx"
-      ]
-    },
-    "本地网络 & IP": {
-      "url_matches_regex": [
-        "^https?://(\\d{1,3}\\.){3}\\d{1,3}"
-      ]
-    },
-    "浏览器功能": {
-        "url_starts_with": ["chrome://", "chrome-extension://", "javascript:"]
-    },
-    "效率工具/在线应用": {
-      "domains": [
-        "figma.com", "framer.com",
-        "canva.com",
-        "miro.com",
-        "excalidraw.com",
-        "regex101.com",
-        "codesandbox.io", "codepen.io", "replit.com",
-        "tinypng.com", "tinyjpg.com",
-        "tldraw.com",
-        "anywebp.com", "pdf2docx.cn", "latex.to", "wxpusher.zjiecode.com", "xxtui.com", 
-        "portableapps.com", "netcut.cn", "airclipbd.com", "pairdrop.net", "jsoncrack.com", 
-        "mermaid.live", "star-history.com", "deepl.com",
-        "deeplx.missuo.ru", "pdf2zh.com", "honeypdf.com", "store.rg-adguard.net", "t.me",
-        "translate.kagi.com", "archive.md", "tool.browser.qq.com", "macwk.cn", "ppresume.com",
-        "iobit.com", "raycast.com", "keep.google.com", "wanzhi.com", "indiehackertools.net"
-      ],
-      "url_contains": []
-    },
-    "学习 & 阅读/文档 & 速查表": {
-      "domains": ["docs.rs", "devdocs.io"],
-      "url_ends_with": [".pdf"],
-      "weight": 15,
-      "min_score": 10
-    },
-    "效率工具/编辑与格式化": {
-      "min_score": 3,
+      "weight": 100,
       "rules": [
-        {
-          "match": "domain",
-          "keywords": ["jsoneditoronline.org", "bejson.com", "jsonmatic.com"],
-          "weight": 8
-        }
+        { "match": "domain", "keywords": ["zego.im", "zego.cloud", "bgi.com", "genomics.cn", "dingtalk.com"] }
       ]
     },
-    "效率工具/性能分析": {
-      "min_score": 4,
+    "本地网络 & 浏览器": {
+      "weight": 100,
       "rules": [
-        {
-          "match": "title",
-          "keywords": ["profiler", "vtune", "performance"],
-          "weight": 6
-        }
-      ]
-    },
-    "效率工具/笔记与知识管理": {
-      "min_score": 3,
-      "rules": [
-        {
-          "match": "domain",
-          "keywords": ["remnote.com"],
-          "weight": 5
-        }
-      ]
-    },
-    "休闲娱乐/导航与聚合": {
-      "min_score": 2,
-      "rules": [
-        {
-          "match": "domain",
-          "keywords": ["m.vieg.net", "guozhivip.com"],
-          "weight": 3
-        }
-      ]
-    },
-    "生活 & 服务/常用网站": {
-      "min_score": 2,
-      "rules": [
-        {
-          "match": "domain",
-          "keywords": ["baidu.com", "bing.com", "sogou.com", "so.com", "sina.com.cn", "apple.com", "icloud.com"],
-          "weight": 3
-        }
+        { "match": "url_starts_with", "keywords": ["chrome://", "javascript:", "about:"] },
+        { "match": "url_matches_regex", "keywords": ["^https?://(10|172|192)\\."] }
       ]
     }
   },
-  "read_later_rules": {
-    "category_name": "学习 & 阅读/稍后阅读",
-    "weight": 20,
-    "min_score": 15,
-    "domains": [
-      "medium.com", "dev.to", "freecodecamp.org", "hashnode.com",
-      "hackernoon.com", "dzone.com", "infoq.com", "juejin.cn", "segmentfault.com",
-      "stackoverflow.com", "stackexchange.com", "martinfowler.com", "css-tricks.com", 
-      "smashingmagazine.com", "thenewstack.io", "techcrunch.com", "stratechery.com", 
-      "news.ycombinator.com", "baeldung.com", "geeksforgeeks.org", "tutorialspoint.com", 
-      "w3schools.com", "towardsdatascience.com", "zhihu.com", "jianshu.com",
-      "评测", "体验"
-    ],
-    "keywords_in_title": [
-      "教程",
-      "指南",
-      "入门",
-      "实践",
-      "实战",
-      "详解",
-      "案例"
-    ],
-    "path_restrictions": {
-      "zhihu.com": ["/p/", "/column/"],
-      "yuque.com": ["/docs/", "/posts/"],
-      "linkedin.com": [],
-      "zhipin.com": [],
-      "lagou.com": [],
-      "indeed.com": [],
-      "glassdoor.com": [],
-      "amap.com": [],
-      "dianping.com": [],
-      "meituan.com": [],
-      "12306.cn": []
-    },
-    "技术栈/编程语言/Python": {
-      "min_score": 5,
-      "rules": [
-        {
-          "match": "title",
-          "keywords": ["python", "pandas", "numpy", "jupyter"],
-          "weight": 5
-        },
-        {
-          "match": "url",
-          "keywords": ["python"],
-          "weight": 3
-        }
-      ]
-    },
-    "技术栈/编程语言/Go": {
-      "min_score": 3,
-      "rules": [
-        {
-          "match": "domain",
-          "keywords": ["gin-gonic.com", "talkgo.org", "gobyexample.com"],
-          "weight": 8
-        },
-        {
-          "match": "title",
-          "keywords": ["golang", " go "],
-          "weight": 5
-        }
-      ]
-    },
-    "技术栈/技术博客与社区": {
-      "min_score": 3,
-      "rules": [
-        {
-          "match": "domain",
-          "keywords": ["coolshell.cn", "eddycjy.com", "learnku.com", "overreacted.io", "engineeringblogs.xyz", "zishu.me", "csdn.net", "cnblogs.com", "juejin.cn", "segmentfault.com", "oschina.net", "infoq.com"],
-          "weight": 5
-        }
-      ]
-    },
-    "技术栈/Web开发": {
-      "rules": [
-        {
-          "match": "title",
-          "keywords": ["react", "vue", "angular", "webpack", "nodejs", "css", "html", "frontend", "backend", "echarts"],
-          "weight": 5
-        }
-      ]
-    },
-    "生物信息/基因组学": {
-      "rules": [
-        {
-          "match": "title",
-          "keywords": ["genome", "genomics", "gwas", "vcf", "bam", "基因组", "qiime2", "megan", "gatk"],
-          "must_not_contain": ["job", "career"],
-          "weight": 10
-        },
-        {
-          "match": "title",
-          "keywords": ["bioinformatics", "computational biology", "生物信息"],
-          "weight": 8
-        }
-      ]
-    }
-  },
+
   "category_rules": {
-    "工作": {
+    "AI/模型与平台": {
       "rules": [
-        { "match": "domain", "keywords": ["genomics.cn", "bgi.com", "dingtalk.com"], "weight": 20 }
+        { "match": "domain", "keywords": ["openai.com", "huggingface.co", "cohere.com", "anthropic.com", "chatglm.cn", "hunyuan.tencent.com", "baichuan-ai.com", "mistral.ai", "reka.ai", "jina.ai", "qwen.ai", "deepseek.com"], "weight": 15 },
+        { "match": "title", "keywords": ["gpt-4", "gpt4", "claude 3", "gemini", "llama", "sora", "大模型", "llm"], "weight": 10 }
+      ]
+    },
+    "AI/应用与工具": {
+      "rules": [
+        { "match": "domain", "keywords": ["perplexity.ai", "aider.chat", "replicate.com", "midjourney.com", "styleai.art", "ghibliai.net", "voo.works", "readpaper.com", "codium.ai", "metaso.cn"], "weight": 10 },
+        { "match": "title", "keywords": ["copilot", "langchain", "prompt", "stable diffusion", "aigc"], "weight": 8 }
+      ]
+    },
+    "AI/论文与资讯": {
+       "rules": [
+        { "match": "domain", "keywords": ["arxiv.org", "paperswithcode.com", "jalammar.github.io", "thenlp.space"], "weight": 10 }
       ]
     },
     "技术栈/代码 & 开源": {
         "rules": [
-            { "match": "domain", "keywords": ["gitcode.com", "vscode.dev", "opensource.google", "elixir.bootlin.com", "learn.microsoft.com", "diffx.org", "opendev.org", "go101.org", "0xinfection.github.io", "codebrowser.dev", "sysprogs.com", "github.io"], "weight": 10 }
+            { "match": "domain", "keywords": ["github.com", "gitlab.com", "gitcode.com", "sourceforge.net", "opensource.google", "opendev.org", "github.io"], "weight": 15 }
         ]
     },
-    "技术栈/社区 & 资讯": {
+    "技术栈/编程语言": {
       "rules": [
-        { "match": "domain", "keywords": ["linux.do", "v2ex.com", "solidot.org", "nga.178.com", "dr.leviding.com", "ydma.com"], "weight": 10 }
+        { "match": "domain", "keywords": ["python.org", "rust-lang.org", "go.dev", "java.com", "elixir.bootlin.com"], "weight": 10 },
+        { "match": "title", "keywords": ["python", "rust", "golang", " go ", "java", "c++", "openmp", "cuda"], "weight": 8, "must_not_contain": ["go out", "go shopping"] }
+      ]
+    },
+    "技术栈/Web开发": {
+       "rules": [
+        { "match": "domain", "keywords": ["vue-element-admin-site.panjiachen.com", "gioui.org", "webrtcforthecurious.com"], "weight": 8 },
+        { "match": "title", "keywords": ["react", "vue", "angular", "webpack", "nodejs", "css", "html", "frontend", "echarts", "eslint"], "weight": 5 }
       ]
     },
     "技术栈/云服务 & DevOps": {
       "rules": [
-        { "match": "domain", "keywords": ["docker.com", "kubernetes.io", "helm.sh", "aws.amazon.com", "cloud.google.com", "azure.microsoft.com", "vercel.com", "netlify.com", "cloudflare.com", "heroku.com", "circleci.com", "travis-ci.org", "jenkins.io", "aliyun.com", "huaweicloud.com", "coder.com", "unraid.net", "apptainer.org"], "weight": 10 },
-        { "match": "title", "keywords": ["devops", "kubernetes", "docker", "aws", "gcp", "azure", "terraform", "ansible", "ci/cd", "container"], "weight": 5 }
+        { "match": "domain", "keywords": ["docker.com", "kubernetes.io", "helm.sh", "aliyun.com", "huaweicloud.com", "vercel.com", "netlify.com", "cloudflare.com", "apptainer.org", "coder.com", "unraid.net"], "weight": 10 },
+        { "match": "title", "keywords": ["devops", "kubernetes", "docker", "ci/cd", "container", "jenkins", "prometheus", "grafana"], "weight": 7 }
       ]
     },
-    "技术栈/Web 开发": {
+    "生物信息": {
+       "rules": [
+        { "match": "domain", "keywords": ["bioconda.github.io", "broadinstitute.org", "illumina.com", "ncbi.nlm.nih.gov", "stomics.tech", "cngb.org", "thermofisher.cn", "insvast.com", "harvard.edu", "biorxiv.org", "nature.com", "embopress.org", "rosalind.info", "biocontainers.pro", "singlecellcourse.org"], "weight": 20 },
+        { "match": "title", "keywords": ["bioinformatics", "biotool", "rna-seq", "genomics", "genome", "fastq", "sam", "vcf", "bam", "bioperl", "cell", "qiime2", "gatk", "基因组", "测序"], "weight": 15 }
+      ]
+    },
+    "OnlineBooks": {
       "rules": [
-        { "match": "domain", "keywords": ["gioui.org", "webrtcforthecurious.com"], "weight": 10 },
-        { "match": "title", "keywords": ["react", "vue", "angular", "svelte", "next.js", "nuxt.js", "webpack", "vite", "css", "html", "javascript", "typescript", "nodejs", "deno", "express", "web dev"], "weight": 5 }
+        { "match": "domain", "keywords": ["greenteapress.com", "udlbook.github.io", "kancloud.cn", "ituring.com.cn", "norvig.com", "hello-algo.com", "gitbook.com"], "weight": 10 },
+        { "match": "title", "keywords": ["book", "手册", "指南", "tutorial"], "weight": 5 }
       ]
     },
-    "技术栈/后端 & 数据库": {
+    "技术资料": {
       "rules": [
-        { "match": "domain", "keywords": ["python.org", "rust-lang.org", "java.com", "mongodb.com", "redis.io", "postgresql.org", "sourceforge.net"], "weight": 10 },
-        { "match": "title", "keywords": ["python", "django", "flask", "fastapi", "rust", "golang", "java", "spring", "sql", "mysql", "postgresql", "sqlite", "mongodb", "redis", "c++", "openmp", "gpu", "nim"], "weight": 5, "must_not_contain": ["go out", "go shopping", "game", "play rust"] },
-        { "match": "title", "keywords": [" go "], "weight": 4, "must_not_contain": ["go out", "go shopping"]}
+        { "match": "domain", "keywords": ["stackoverflow.com", "stackexchange.com", "medium.com", "dev.to", "juejin.cn", "segmentfault.com", "infoq.com", "ruanyifeng.com", "coolshell.cn", "zhile.io", "eryajf.net", "mtlynch.io", "blog.codingconfessions.com"], "weight": 10 },
+        { "match": "url_ends_with": [".pdf"], "weight": 8 }
       ]
     },
-    "技术栈/AI & 数据科学": {
+    "Lectures": {
       "rules": [
-        { "match": "domain", "keywords": ["openai.com", "huggingface.co", "kaggle.com", "tensorflow.org", "pytorch.org", "aider.chat", "chat01.ai", "ossinsight.io", "cohere.com", "styleai.art", "ghibliai.net", "jina.ai", "replicate.com", "anthropic.com", "labs.google", "vika.cn", "chatglm.cn", "hunyuan.tencent.com", "gpt4copilot.tech", "voo.works", "beta.lmarena.ai", "perplexity.ai", "search.lepton.run", "challenge.datacastle.cn", "arxiv.dev", "mcp.so", "demo.voapi.top", "apigpts.dev", "coach.microsoft.com", "aicc.gptdevelopment.online", "app.anakin.ai", "hix.ai", "platform.baichuan-ai.com", "metaso.cn", "readpaper.com", "thenlp.space", "jalammar.github.io", "ourworldindata.org", "people.idsia.ch", "3blue1brown.com", "reka.ai", "serokell.io"], "weight": 10 },
-        { "match": "title", "keywords": ["tensorflow", "pytorch", "keras", "scikit-learn", "pandas", "numpy", "jupyter", "colab", "kaggle", "openai", "claude", "gemini", "huggingface", "llama", "mistral", "sora", "llm", "ai", "gpt", "deepseek", "大模型", "人工智能", "prompt", "copilot", "langchain", "midjourney", "stable diffusion", "Notion", "C代码", "硬件知识", "word2vec"], "weight": 5 }
+        { "match": "domain", "keywords": ["slides.com", "speakerdeck.com", "ocw.mit.edu", "youtube.com", "bilibili.com"], "weight": 8, "match_all_keywords_in": {"title": ["lecture", "course", "talk", "conference", "教程", "课程"]} },
+        { "match": "title", "keywords": ["幻灯片", "演讲"], "weight": 5 }
       ]
     },
-    "技术栈/生物信息": {
+    "社区": {
       "rules": [
-        { "match": "domain", "keywords": ["bioconda.github.io", "broadinstitute.org", "illumina.com", "ncbi.nlm.nih.gov", "stomics.tech", "cngb.org", "thermofisher.cn", "insvast.com", "harvard.edu", "biorxiv.org", "nature.com", "helix.com", "journals.biologists.com", "embopress.org", "divingintogeneticsandgenomics.com", "genome.cshlp.org", "rosalind.info", "biocontainers.pro", "singlecellcourse.org"], "weight": 10 },
-        { "match": "title", "keywords": ["bioinformatics", "biotool", "rna-seq", "genomics", "fastq", "sam", "vcf", "bioperl", "cell"], "weight": 5 }
+        { "match": "domain", "keywords": ["linux.do", "v2ex.com"], "weight": 20 },
+        { "match": "domain", "keywords": ["news.ycombinator.com", "reddit.com", "solidot.org", "hachyderm.io", "mastodon.social", "hupu.com", "chiphell.com"], "weight": 10 }
       ]
     },
-    "技术栈/安全": {
+    "资讯": {
+      "rules": [
+        { "match": "domain", "keywords": ["techcrunch.com", "theverge.com", "producthunt.com", "36kr.com", "arstechnica.com", "cnbeta.com.tw"], "weight": 8 },
+        { "match": "title", "keywords": ["news", "report", "周刊", "weekly", "日报"], "weight": 5 }
+      ]
+    },
+    "OnlineTools": {
+      "rules": [
+        { "match": "domain", "keywords": ["deepl.com", "regex101.com", "codepen.io", "tldraw.com", "jsoncrack.com", "mermaid.live", "excalidraw.com", "star-history.com", "portableapps.com", "raycast.com"], "weight": 10 }
+      ]
+    },
+    "娱乐": {
         "rules": [
-            { "match": "domain", "keywords": ["52pojie.cn", "jetbrain.tech", "3.jetbra.in", "junlong.plus", "kaspersky.co.uk", "hy345.com"], "weight": 10 }
+            { "match": "domain", "keywords": ["gying.si", "hifini.com", "music.163.com", "douban.com", "dribbble.com", "behance.net", "unsplash.com", "thefarside.com"], "weight": 8 },
+            { "match": "title", "keywords": ["电影", "音乐", "music", "播客", "wallpaper", "壁纸", "游戏", "漫画"], "weight": 5 }
         ]
     },
-    "设计 & 创意": {
+    "稍后阅读": {
       "rules": [
-        { "match": "domain", "keywords": ["dribbble.com", "behance.net", "pinterest.com", "adobe.com", "reddit.com", "sourcemaking.com", "unsplash.com", "thefarside.com", "mymodernmet.com", "logogenie.net"], "weight": 10 },
-        { "match": "title", "keywords": ["design", "ui/ux", "illustration", "photoshop", "figma", "wallpaper", "壁纸", "logo"], "weight": 5 }
+        { "match": "title", "keywords": ["教程", "实践", "实战", "详解", "攻略", "指南"], "weight": 7 }
       ]
     },
-    "资料库": {
-      "rules": [
-        { "match": "domain", "keywords": ["greenteapress.com", "udlbook.github.io", "kancloud.cn", "readthedocs.io", "wtf.academy", "oi-wiki.org", "hello-algo.com", "annas-archive.org", "ituring.com.cn", "norvig.com", "ocw.mit.edu", "szsyw.cn", "qiangmzsx.github.io", "codeforces.com", "zh.d2l.ai", "nayuki.io", "wiki.decohack.com", "runoob.com", "imooc.com", "gitbook.com", "bookstack.cn"], "weight": 8 },
-        { "match": "title", "keywords": ["book", "笔记", "教程", "documentation", "spec", "幻灯片", "文档", "文件", "wiki", "手册"], "weight": 5 }
-      ]
-    },
-    "资料库/技术博客": {
+    "求职": {
         "rules": [
-            { "match": "domain", "keywords": ["mtlynch.io", "chenzomi12.github.io", "jyywiki.cn", "weekly.howie6879.com", "weekly.tw93.fun", "hutusi.com", "samwho.dev", "wtsnwei.github.io", "eugeneyan.com", "axiaoxin.com", "blog.codingconfessions.com", "ruanyifeng.com", "openbiox.github.io", "wiki-power.com", "zhile.io", "eryajf.net"], "weight": 9 }
-        ]
-    },
-    "新闻 & 资讯": {
-      "rules": [
-        { "match": "domain", "keywords": ["news.ycombinator.com", "techcrunch.com", "theverge.com", "reuters.com", "bloomberg.com", "wsj.com", "bbc.com", "nytimes.com", "producthunt.com", "momoyu.cc", "landiannews.com", "patreon.com", "36kr.com", "arstechnica.com", "dw.com", "mittrchina.com", "techxplore.com", "zeli.app", "archive.bedtime.news"], "weight": 10 },
-        { "match": "title", "keywords": ["news", "report", "breaking", "headline", "周刊", "weekly"], "weight": 4 }
-      ]
-    },
-    "求职 & 招聘": {
-      "rules": [
-        { "match": "domain", "keywords": ["linkedin.com", "zhipin.com", "lagou.com", "indeed.com", "glassdoor.com", "duibiao.info"], "weight": 10 },
-        { "match": "title", "keywords": ["招聘", "求职", "career", "hiring", "job"], "weight": 5 }
-      ]
-    },
-    "生活 & 服务": {
-      "rules": [
-        { "match": "domain", "keywords": ["amap.com", "dianping.com", "meituan.com", "12306.cn", "hupu.com", "kuakua.app", "rishiqing.com", "numberpairs.org", "catcoding.me", "garmin.cn", "toocool.cc", "woodenears.com", "zufangbb.cn", "windy.com", "kafeih.com", "hezuclub.com", "chongdiantou.com"], "weight": 10 },
-        { "match": "title", "keywords": ["地图", "外卖", "点评", "火车票", "旅行", "租房", "健身"], "weight": 5 }
-      ]
-    },
-    "生活 & 服务/运动健康": {
-        "rules": [
-            { "match": "domain", "keywords": ["darebee.com", "victorsport.com.cn"], "weight": 10 }
-        ]
-    },
-    "媒体库": {
-      "rules": [
-        { "match": "domain", "keywords": ["gying.si", "utao.tv", "tmioe.com"], "weight": 10 },
-        { "match": "title", "keywords": ["电影", "TV"], "weight": 5 }
-      ]
-    },
-    "媒体库/音乐": {
-        "rules": [
-            { "match": "domain", "keywords": ["hifini.com", "liuzhijin.cn", "hirescloud.com", "demo.unlock-music.dev", "tools.liumingye.cn", "mintcast.org", "xyzrank.com", "musicfree.upup.fun"], "weight": 10 },
-            { "match": "title", "keywords": ["音乐", "music", "播客"], "weight": 5 }
-        ]
-    },
-    "社交网络": {
-        "rules": [
-            { "match": "domain", "keywords": ["mastodon.social", "hachyderm.io", "okjike.com", "twiman.net"], "weight": 10 }
-        ]
-    },
-    "政府 & 机构": {
-        "rules": [
-            { "match": "domain", "keywords": ["gov.cn", "mil.cn", "uconn.edu"], "weight": 10 }
-        ]
-    },
-    "金融": {
-        "rules": [
-            { "match": "domain", "keywords": ["gu.qq.com", "fupanhao.com", "pitchhub.36kr.com"], "weight": 10 },
-            { "match": "title", "keywords": ["银行", "股票", "基金", "投资", "融资"], "weight": 5 }
+            { "match": "domain", "keywords": ["linkedin.com", "zhipin.com", "lagou.com", "kanxue.com", "nowcoder.com"], "weight": 10 },
+            { "match": "title", "keywords": ["招聘", "求职", "career", "hiring", "job", "面试"], "weight": 5 }
         ]
     }
-  },
-  "domain_based_subcats": []
-} 
+  }
+}
