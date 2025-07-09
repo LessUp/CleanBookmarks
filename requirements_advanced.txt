@@ -1,0 +1,12 @@
+beautifulsoup4
+lxml
+numpy
+scikit-learn
+jieba
+langdetect
+matplotlib
+seaborn
+pandas
+requests
+tqdm
+click
