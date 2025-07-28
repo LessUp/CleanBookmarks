@@ -28,7 +28,7 @@ A Python script that automatically merges, cleans, and categorizes browser bookm
 2.  **Add Your Bookmarks**: Place all your exported `.html` bookmark files from your browser into the `tests/input` folder.
 3.  **Run the Script**:
     ```bash
-    python src/clean&tidy.py
+    python src/clean_marks.py
     ```
     The script will automatically use the default `config.json` rule library. If multiple strategy files are detected, you will be prompted to choose one. The organized files will be output to the `tests/output` directory.
 

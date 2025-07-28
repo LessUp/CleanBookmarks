@@ -4,7 +4,7 @@
 
 ### 1.1. 当前系统的现状与挑战
 
-当前的书签整理脚本 (`clean&tidy.py`) 采用一套基于 `config.json` 的规则引擎。该引擎通过关键词匹配、域名判断和加权评分等方式对书签进行分类。
+当前的书签整理脚本 (`clean_marks.py`) 采用一套基于 `config.json` 的规则引擎。该引擎通过关键词匹配、域名判断和加权评分等方式对书签进行分类。
 
 **优点：**
 - **确定性强**：规则明确，分类结果可预测、可解释。
@@ -48,7 +48,7 @@ graph TD
     end
 
     subgraph "阶段三：集成与应用"
-        I[clean&tidy.py] --> J{6. 加载模型<br/>bookmark_classifier.joblib};
+        I[clean_marks.py] --> J{6. 加载模型<br/>bookmark_classifier.joblib};
         J --> K[7. 改造分类函数];
         subgraph "混合分类策略"
             direction TB
@@ -67,7 +67,7 @@ graph TD
 ### 工作流程概述：
 1.  **数据准备**：利用现有脚本的初步成果，通过人工校对，创建一份高质量的、带"标准答案"的标注数据集 (`labeled_bookmarks.csv`)。
 2.  **模型训练**：创建一个独立的训练脚本 (`train_model.py`)，该脚本读取标注数据，使用 `scikit-learn` 库来训练一个文本分类模型，并将其保存为文件 (`bookmark_classifier.joblib`)。
-3.  **集成与应用**：修改主脚本 (`clean&tidy.py`)，使其能够加载并使用训练好的模型。我们将实现一个混合分类逻辑：优先应用一些简单的、确定性高的规则，对于其他书签，则调用 AI 模型来预测其最佳分类。
+3.  **集成与应用**：修改主脚本 (`clean_marks.py`)，使其能够加载并使用训练好的模型。我们将实现一个混合分类逻辑：优先应用一些简单的、确定性高的规则，对于其他书签，则调用 AI 模型来预测其最佳分类。
 
 ---
 
@@ -84,7 +84,7 @@ graph TD
     - `category`: **人工校对后**的正确分类路径，例如 `技术栈/Python` 或 `AI 研究室`。
 
 2.  **数据获取与标注流程（冷启动）**：
-    a. **初步运行**：不带任何参数运行 `python src/clean&tidy.py`，让现有规则系统处理 `tests/input` 目录下的所有书签。
+    a. **初步运行**：不带任何参数运行 `python src/clean_marks.py`，让现有规则系统处理 `tests/input` 目录下的所有书签。
     b. **获取初步结果**：脚本会生成 `tests/output/bookmarks.md` 和 `unclassified_log.txt`。
     c. **人工校对**：
         - 检查 `bookmarks.md` 中各个分类下的书签，找出**分错了**的。
@@ -115,11 +115,11 @@ graph TD
     e. **模型评估**：在测试集上进行预测，并计算准确率（Accuracy）、精确率（Precision）、召回率（Recall）等指标，以评估模型性能。
     f. **模型序列化**：将训练好的 `TfidfVectorizer` 和分类器打包，使用 `joblib.dump` 保存为一个单独的文件 `bookmark_classifier.joblib`。
 
-### 3.3. 阶段三：集成到 `clean&tidy.py`
+### 3.3. 阶段三：集成到 `clean_marks.py`
 
 最后一步是将我们训练的 AI 模型应用到主流程中。
 
-1.  **加载模型**：在 `clean&tidy.py` 的 `main` 函数开始处，检查 `bookmark_classifier.joblib` 文件是否存在，如果存在则使用 `joblib.load` 加载。
+1.  **加载模型**：在 `clean_marks.py` 的 `main` 函数开始处，检查 `bookmark_classifier.joblib` 文件是否存在，如果存在则使用 `joblib.load` 加载。
 
 2.  **创建新的分类函数**：
     - 新增一个函数 `classify_with_ai(url, title, model)`。

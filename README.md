@@ -28,7 +28,7 @@
 2.  **放入书签**：将您从浏览器导出的 `.html` 书签文件全部放入 `tests/input` 文件夹。
 3.  **运行脚本**：
     ```bash
-    python src/clean&tidy.py
+    python src/clean_marks.py
     ```
     脚本将自动使用默认的 `config.json` 规则库。如果检测到多个策略文件，会提示您进行选择。整理好的文件将输出到 `tests/output` 目录。
 

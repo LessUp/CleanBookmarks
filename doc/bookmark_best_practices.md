@@ -61,7 +61,7 @@ Never settle for a website's default title, especially when it's vague (e.g., "H
 2.  **Add to the "Raw Materials" Bin:** Place the exported HTML file into the project's `tests/input/` directory.
 3.  **Run with One Click:** Execute the core script:
     ```bash
-    python src/clean&tidy.py
+    python src/clean_marks.py
     ```
 4.  **Analyze the "Newcomers":** After the script runs, focus on the `unclassified_log.txt` file. This is your source of inspiration for all new rules. See which websites you've been visiting frequently that haven't been categorized yet.
 5.  **Tune the "Config File" (Optional):** Open `config.json` and add the new patterns you discovered as domains or keywords to the appropriate category rules. This is key to making the system "evolve."
