@@ -250,9 +250,16 @@ class EnhancedBookmarkProcessor:
                 
                 for item in items:
                     confidence = item.get('confidence', 0)
-                    conf_indicator = "🔥" if confidence > 0.8 else "📌" if confidence > 0.6 else "❓"
-                    title_with_conf = f"{conf_indicator} {item['title']}"
-                    
+
+                    # Check if confidence indicators should be shown
+                    show_indicators = self.config.get('advanced_settings', {}).get('show_confidence_indicators', False)
+
+                    if show_indicators:
+                        conf_indicator = "🔥" if confidence > 0.8 else "📌" if confidence > 0.6 else "❓"
+                        title_with_conf = f"{conf_indicator} {item['title']}"
+                    else:
+                        title_with_conf = item['title']
+
                     lines.append(f"{ind}    <DT><A HREF=\"{item['url']}\" ADD_DATE=\"{timestamp}\">{title_with_conf}</A>")
             
             lines.append(f"{ind}</DL><p>")
@@ -296,8 +303,15 @@ class EnhancedBookmarkProcessor:
                 
                 for item in items:
                     confidence = item.get('confidence', 0)
-                    conf_emoji = "🔥" if confidence > 0.8 else "📌" if confidence > 0.6 else "❓"
-                    lines.append(f"- {conf_emoji} [{item['title']}]({item['url']}) *({confidence:.2f})*")
+
+                    # Check if confidence indicators should be shown
+                    show_indicators = self.config.get('advanced_settings', {}).get('show_confidence_indicators', False)
+
+                    if show_indicators:
+                        conf_emoji = "🔥" if confidence > 0.8 else "📌" if confidence > 0.6 else "❓"
+                        lines.append(f"- {conf_emoji} [{item['title']}]({item['url']}) *({confidence:.2f})*")
+                    else:
+                        lines.append(f"- [{item['title']}]({item['url']})")
                 
                 lines.append("")
         

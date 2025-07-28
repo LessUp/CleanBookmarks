@@ -1,23 +1,38 @@
 {
   "title_cleaning_rules": {
-    "prefixes": ["登录 |", "Sign in ·", "登录 ", "Welcome to ", "Home - ", "Index - "],
-    "suffixes": [
-      "- V2EX", "· GitHub", "| Microsoft Learn", " - 知乎", " - 简书", 
-      "| 酷 壳 - CoolShell", " - Stack Overflow", " - Wikipedia", 
-      " | Medium", " - Dev.to", " - Hacker News"
+    "prefixes": [
+      "登录 |",
+      "Sign in ·",
+      "登录 ",
+      "Welcome to ",
+      "Home - ",
+      "Index - "
     ],
-    "replacements": { 
-      "&amp;": "&", 
-      "&lt;": "<", 
-      "&gt;": ">", 
-      "--- ": "- ", 
+    "suffixes": [
+      "- V2EX",
+      "· GitHub",
+      "| Microsoft Learn",
+      " - 知乎",
+      " - 简书",
+      "| 酷 壳 - CoolShell",
+      " - Stack Overflow",
+      " - Wikipedia",
+      " | Medium",
+      " - Dev.to",
+      " - Hacker News"
+    ],
+    "replacements": {
+      "&amp;": "&",
+      "&lt;": "<",
+      "&gt;": ">",
+      "--- ": "- ",
       "(7条消息)": "",
       "【": "[",
       "】": "]"
     }
   },
-
   "advanced_settings": {
+    "show_confidence_indicators": false,
     "classification_threshold": 0.6,
     "semantic_similarity_threshold": 0.7,
     "learning_rate": 0.1,
@@ -29,9 +44,12 @@
     "confidence_boost_factor": 1.2,
     "feedback_weight": 0.3
   },
-
-  "processing_order": ["priority_rules", "category_rules", "semantic_rules", "adaptive_rules"],
-
+  "processing_order": [
+    "priority_rules",
+    "category_rules",
+    "semantic_rules",
+    "adaptive_rules"
+  ],
   "category_order": [
     "工作台",
     "AI & 机器学习",
@@ -48,321 +66,645 @@
     "稍后阅读",
     "未分类"
   ],
-
   "semantic_rules": {
     "programming_keywords": {
-      "chinese": ["编程", "开发", "代码", "程序", "算法", "数据结构", "软件工程"],
-      "english": ["programming", "development", "coding", "algorithm", "software", "engineering"]
+      "chinese": [
+        "编程",
+        "开发",
+        "代码",
+        "程序",
+        "算法",
+        "数据结构",
+        "软件工程"
+      ],
+      "english": [
+        "programming",
+        "development",
+        "coding",
+        "algorithm",
+        "software",
+        "engineering"
+      ]
     },
     "ai_ml_keywords": {
-      "chinese": ["人工智能", "机器学习", "深度学习", "神经网络", "自然语言处理", "计算机视觉"],
-      "english": ["artificial intelligence", "machine learning", "deep learning", "neural network", "nlp", "computer vision"]
+      "chinese": [
+        "人工智能",
+        "机器学习",
+        "深度学习",
+        "神经网络",
+        "自然语言处理",
+        "计算机视觉"
+      ],
+      "english": [
+        "artificial intelligence",
+        "machine learning",
+        "deep learning",
+        "neural network",
+        "nlp",
+        "computer vision"
+      ]
     },
     "bioinformatics_keywords": {
-      "chinese": ["生物信息", "基因组", "蛋白质", "序列分析", "生物统计"],
-      "english": ["bioinformatics", "genomics", "proteomics", "sequence analysis", "biostatistics"]
+      "chinese": [
+        "生物信息",
+        "基因组",
+        "蛋白质",
+        "序列分析",
+        "生物统计"
+      ],
+      "english": [
+        "bioinformatics",
+        "genomics",
+        "proteomics",
+        "sequence analysis",
+        "biostatistics"
+      ]
     }
   },
-
   "domain_intelligence": {
     "AI & 机器学习": {
-      "primary_domains": ["openai.com", "huggingface.co", "deepmind.com", "anthropic.com", "cohere.com"],
-      "secondary_domains": ["arxiv.org", "paperswithcode.com", "towards.ai", "medium.com"],
-      "path_patterns": ["/ai/", "/ml/", "/neural/", "/deep-learning/"],
-      "title_patterns": ["GPT", "ChatGPT", "BERT", "Transformer", "LLM", "大模型"]
+      "primary_domains": [
+        "openai.com",
+        "huggingface.co",
+        "deepmind.com",
+        "anthropic.com",
+        "cohere.com"
+      ],
+      "secondary_domains": [
+        "arxiv.org",
+        "paperswithcode.com",
+        "towards.ai",
+        "medium.com"
+      ],
+      "path_patterns": [
+        "/ai/",
+        "/ml/",
+        "/neural/",
+        "/deep-learning/"
+      ],
+      "title_patterns": [
+        "GPT",
+        "ChatGPT",
+        "BERT",
+        "Transformer",
+        "LLM",
+        "大模型"
+      ]
     },
     "编程 & 开发": {
-      "primary_domains": ["github.com", "gitlab.com", "stackoverflow.com", "developer.mozilla.org"],
-      "secondary_domains": ["dev.to", "codepen.io", "replit.com", "codesandbox.io"],
-      "path_patterns": ["/docs/", "/api/", "/tutorial/", "/guide/"],
-      "title_patterns": ["API", "Documentation", "Tutorial", "Guide", "开发文档"]
+      "primary_domains": [
+        "github.com",
+        "gitlab.com",
+        "stackoverflow.com",
+        "developer.mozilla.org"
+      ],
+      "secondary_domains": [
+        "dev.to",
+        "codepen.io",
+        "replit.com",
+        "codesandbox.io"
+      ],
+      "path_patterns": [
+        "/docs/",
+        "/api/",
+        "/tutorial/",
+        "/guide/"
+      ],
+      "title_patterns": [
+        "API",
+        "Documentation",
+        "Tutorial",
+        "Guide",
+        "开发文档"
+      ]
     },
     "生物信息学": {
-      "primary_domains": ["ncbi.nlm.nih.gov", "ensembl.org", "uniprot.org", "bioconductor.org"],
-      "secondary_domains": ["nature.com", "science.org", "plos.org", "biorxiv.org"],
-      "path_patterns": ["/bio/", "/genomics/", "/proteomics/", "/bioinformatics/"],
-      "title_patterns": ["Genome", "Protein", "Sequence", "BLAST", "基因", "蛋白质"]
+      "primary_domains": [
+        "ncbi.nlm.nih.gov",
+        "ensembl.org",
+        "uniprot.org",
+        "bioconductor.org"
+      ],
+      "secondary_domains": [
+        "nature.com",
+        "science.org",
+        "plos.org",
+        "biorxiv.org"
+      ],
+      "path_patterns": [
+        "/bio/",
+        "/genomics/",
+        "/proteomics/",
+        "/bioinformatics/"
+      ],
+      "title_patterns": [
+        "Genome",
+        "Protein",
+        "Sequence",
+        "BLAST",
+        "基因",
+        "蛋白质"
+      ]
     }
   },
-
   "priority_rules": {
     "工作台/公司内部": {
       "weight": 100,
       "rules": [
-        { 
-          "match": "domain", 
-          "keywords": ["zego.im", "zego.cloud", "bgi.com", "genomics.cn", "dingtalk.com", "feishu.cn"],
+        {
+          "match": "domain",
+          "keywords": [
+            "zego.im",
+            "zego.cloud",
+            "bgi.com",
+            "genomics.cn",
+            "dingtalk.com",
+            "feishu.cn"
+          ],
           "weight": 100
         },
         {
           "match": "title",
-          "keywords": ["内部", "公司", "工作", "项目", "团队"],
+          "keywords": [
+            "内部",
+            "公司",
+            "工作",
+            "项目",
+            "团队"
+          ],
           "weight": 80
         }
       ]
     }
   },
-
   "category_rules": {
     "AI & 机器学习/大语言模型": {
       "rules": [
-        { 
-          "match": "domain", 
-          "keywords": ["openai.com", "anthropic.com", "cohere.com", "huggingface.co", "deepseek.com"], 
-          "weight": 20 
+        {
+          "match": "domain",
+          "keywords": [
+            "openai.com",
+            "anthropic.com",
+            "cohere.com",
+            "huggingface.co",
+            "deepseek.com"
+          ],
+          "weight": 20
         },
-        { 
-          "match": "title", 
-          "keywords": ["GPT", "ChatGPT", "Claude", "LLM", "大语言模型", "Transformer"], 
-          "weight": 15 
+        {
+          "match": "title",
+          "keywords": [
+            "GPT",
+            "ChatGPT",
+            "Claude",
+            "LLM",
+            "大语言模型",
+            "Transformer"
+          ],
+          "weight": 15
         },
         {
           "match": "path",
-          "keywords": ["gpt", "llm", "language-model", "chatbot"],
+          "keywords": [
+            "gpt",
+            "llm",
+            "language-model",
+            "chatbot"
+          ],
           "weight": 12
         }
       ]
     },
     "AI & 机器学习/机器学习框架": {
       "rules": [
-        { 
-          "match": "domain", 
-          "keywords": ["tensorflow.org", "pytorch.org", "keras.io", "sklearn.org"], 
-          "weight": 18 
+        {
+          "match": "domain",
+          "keywords": [
+            "tensorflow.org",
+            "pytorch.org",
+            "keras.io",
+            "sklearn.org"
+          ],
+          "weight": 18
         },
-        { 
-          "match": "title", 
-          "keywords": ["TensorFlow", "PyTorch", "Keras", "scikit-learn", "机器学习框架"], 
-          "weight": 12 
+        {
+          "match": "title",
+          "keywords": [
+            "TensorFlow",
+            "PyTorch",
+            "Keras",
+            "scikit-learn",
+            "机器学习框架"
+          ],
+          "weight": 12
         }
       ]
     },
     "AI & 机器学习/研究论文": {
       "rules": [
-        { 
-          "match": "domain", 
-          "keywords": ["arxiv.org", "paperswithcode.com", "scholar.google.com"], 
-          "weight": 15 
+        {
+          "match": "domain",
+          "keywords": [
+            "arxiv.org",
+            "paperswithcode.com",
+            "scholar.google.com"
+          ],
+          "weight": 15
         },
-        { 
-          "match": "title", 
-          "keywords": ["论文", "paper", "research", "arxiv"], 
-          "weight": 10 
+        {
+          "match": "title",
+          "keywords": [
+            "论文",
+            "paper",
+            "research",
+            "arxiv"
+          ],
+          "weight": 10
         }
       ]
     },
     "编程 & 开发/前端开发": {
       "rules": [
-        { 
-          "match": "domain", 
-          "keywords": ["reactjs.org", "vuejs.org", "angular.io", "svelte.dev"], 
-          "weight": 15 
+        {
+          "match": "domain",
+          "keywords": [
+            "reactjs.org",
+            "vuejs.org",
+            "angular.io",
+            "svelte.dev"
+          ],
+          "weight": 15
         },
-        { 
-          "match": "title", 
-          "keywords": ["React", "Vue", "Angular", "JavaScript", "TypeScript", "前端"], 
-          "weight": 10 
+        {
+          "match": "title",
+          "keywords": [
+            "React",
+            "Vue",
+            "Angular",
+            "JavaScript",
+            "TypeScript",
+            "前端"
+          ],
+          "weight": 10
         }
       ]
     },
     "编程 & 开发/后端开发": {
       "rules": [
-        { 
-          "match": "domain", 
-          "keywords": ["nodejs.org", "expressjs.com", "flask.palletsprojects.com", "fastapi.tiangolo.com"], 
-          "weight": 15 
+        {
+          "match": "domain",
+          "keywords": [
+            "nodejs.org",
+            "expressjs.com",
+            "flask.palletsprojects.com",
+            "fastapi.tiangolo.com"
+          ],
+          "weight": 15
         },
-        { 
-          "match": "title", 
-          "keywords": ["Node.js", "Express", "Flask", "FastAPI", "Django", "后端"], 
-          "weight": 10 
+        {
+          "match": "title",
+          "keywords": [
+            "Node.js",
+            "Express",
+            "Flask",
+            "FastAPI",
+            "Django",
+            "后端"
+          ],
+          "weight": 10
         }
       ]
     },
     "编程 & 开发/数据库": {
       "rules": [
-        { 
-          "match": "domain", 
-          "keywords": ["postgresql.org", "mysql.com", "mongodb.com", "redis.io"], 
-          "weight": 15 
+        {
+          "match": "domain",
+          "keywords": [
+            "postgresql.org",
+            "mysql.com",
+            "mongodb.com",
+            "redis.io"
+          ],
+          "weight": 15
         },
-        { 
-          "match": "title", 
-          "keywords": ["PostgreSQL", "MySQL", "MongoDB", "Redis", "数据库"], 
-          "weight": 10 
+        {
+          "match": "title",
+          "keywords": [
+            "PostgreSQL",
+            "MySQL",
+            "MongoDB",
+            "Redis",
+            "数据库"
+          ],
+          "weight": 10
         }
       ]
     },
     "生物信息学/基因组学": {
       "rules": [
-        { 
-          "match": "domain", 
-          "keywords": ["ncbi.nlm.nih.gov", "ensembl.org", "1000genomes.org", "gnomad.broadinstitute.org"], 
-          "weight": 20 
+        {
+          "match": "domain",
+          "keywords": [
+            "ncbi.nlm.nih.gov",
+            "ensembl.org",
+            "1000genomes.org",
+            "gnomad.broadinstitute.org"
+          ],
+          "weight": 20
         },
-        { 
-          "match": "title", 
-          "keywords": ["genome", "genomics", "GWAS", "SNP", "基因组", "全基因组"], 
-          "weight": 15 
+        {
+          "match": "title",
+          "keywords": [
+            "genome",
+            "genomics",
+            "GWAS",
+            "SNP",
+            "基因组",
+            "全基因组"
+          ],
+          "weight": 15
         }
       ]
     },
     "生物信息学/蛋白质组学": {
       "rules": [
-        { 
-          "match": "domain", 
-          "keywords": ["uniprot.org", "pdb.org", "alphafold.ebi.ac.uk"], 
-          "weight": 18 
+        {
+          "match": "domain",
+          "keywords": [
+            "uniprot.org",
+            "pdb.org",
+            "alphafold.ebi.ac.uk"
+          ],
+          "weight": 18
         },
-        { 
-          "match": "title", 
-          "keywords": ["protein", "proteomics", "UniProt", "PDB", "蛋白质", "蛋白质组"], 
-          "weight": 12 
+        {
+          "match": "title",
+          "keywords": [
+            "protein",
+            "proteomics",
+            "UniProt",
+            "PDB",
+            "蛋白质",
+            "蛋白质组"
+          ],
+          "weight": 12
         }
       ]
     },
     "生物信息学/分析工具": {
       "rules": [
-        { 
-          "match": "domain", 
-          "keywords": ["bioconductor.org", "galaxy.org", "usegalaxy.org", "biotools.readthedocs.io"], 
-          "weight": 15 
+        {
+          "match": "domain",
+          "keywords": [
+            "bioconductor.org",
+            "galaxy.org",
+            "usegalaxy.org",
+            "biotools.readthedocs.io"
+          ],
+          "weight": 15
         },
-        { 
-          "match": "title", 
-          "keywords": ["Bioconductor", "Galaxy", "GATK", "BWA", "SAMtools", "生物信息工具"], 
-          "weight": 12 
+        {
+          "match": "title",
+          "keywords": [
+            "Bioconductor",
+            "Galaxy",
+            "GATK",
+            "BWA",
+            "SAMtools",
+            "生物信息工具"
+          ],
+          "weight": 12
         }
       ]
     },
     "开源项目/代码仓库": {
       "rules": [
-        { 
-          "match": "domain", 
-          "keywords": ["github.com", "gitlab.com", "bitbucket.org", "sourceforge.net"], 
-          "weight": 18 
+        {
+          "match": "domain",
+          "keywords": [
+            "github.com",
+            "gitlab.com",
+            "bitbucket.org",
+            "sourceforge.net"
+          ],
+          "weight": 18
         },
-        { 
-          "match": "path", 
-          "keywords": ["repository", "repo", "project", "code"], 
-          "weight": 10 
+        {
+          "match": "path",
+          "keywords": [
+            "repository",
+            "repo",
+            "project",
+            "code"
+          ],
+          "weight": 10
         }
       ]
     },
     "技术文档/官方文档": {
       "rules": [
-        { 
-          "match": "domain", 
-          "keywords": ["docs.python.org", "developer.mozilla.org", "kubernetes.io", "docker.com"], 
-          "weight": 15 
+        {
+          "match": "domain",
+          "keywords": [
+            "docs.python.org",
+            "developer.mozilla.org",
+            "kubernetes.io",
+            "docker.com"
+          ],
+          "weight": 15
         },
-        { 
-          "match": "title", 
-          "keywords": ["Documentation", "API Reference", "Guide", "Tutorial", "文档"], 
-          "weight": 12 
+        {
+          "match": "title",
+          "keywords": [
+            "Documentation",
+            "API Reference",
+            "Guide",
+            "Tutorial",
+            "文档"
+          ],
+          "weight": 12
         },
-        { 
-          "match": "path", 
-          "keywords": ["docs", "documentation", "api", "guide", "tutorial"], 
-          "weight": 10 
+        {
+          "match": "path",
+          "keywords": [
+            "docs",
+            "documentation",
+            "api",
+            "guide",
+            "tutorial"
+          ],
+          "weight": 10
         }
       ]
     },
     "工具 & 服务/在线工具": {
       "rules": [
-        { 
-          "match": "domain", 
-          "keywords": ["regex101.com", "jsonformatter.org", "codebeautify.org", "jwt.io"], 
-          "weight": 15 
+        {
+          "match": "domain",
+          "keywords": [
+            "regex101.com",
+            "jsonformatter.org",
+            "codebeautify.org",
+            "jwt.io"
+          ],
+          "weight": 15
         },
-        { 
-          "match": "title", 
-          "keywords": ["在线工具", "online tool", "converter", "formatter", "validator"], 
-          "weight": 10 
+        {
+          "match": "title",
+          "keywords": [
+            "在线工具",
+            "online tool",
+            "converter",
+            "formatter",
+            "validator"
+          ],
+          "weight": 10
         }
       ]
     },
     "新闻 & 资讯/技术新闻": {
       "rules": [
-        { 
-          "match": "domain", 
-          "keywords": ["techcrunch.com", "arstechnica.com", "theverge.com", "wired.com"], 
-          "weight": 12 
+        {
+          "match": "domain",
+          "keywords": [
+            "techcrunch.com",
+            "arstechnica.com",
+            "theverge.com",
+            "wired.com"
+          ],
+          "weight": 12
         },
-        { 
-          "match": "title", 
-          "keywords": ["news", "新闻", "tech news", "technology"], 
-          "weight": 8 
+        {
+          "match": "title",
+          "keywords": [
+            "news",
+            "新闻",
+            "tech news",
+            "technology"
+          ],
+          "weight": 8
         }
       ]
     },
     "社区论坛/技术社区": {
       "rules": [
-        { 
-          "match": "domain", 
-          "keywords": ["stackoverflow.com", "reddit.com", "hackernews.com", "v2ex.com"], 
-          "weight": 15 
+        {
+          "match": "domain",
+          "keywords": [
+            "stackoverflow.com",
+            "reddit.com",
+            "hackernews.com",
+            "v2ex.com"
+          ],
+          "weight": 15
         },
-        { 
-          "match": "title", 
-          "keywords": ["forum", "community", "discussion", "社区", "论坛"], 
-          "weight": 10 
+        {
+          "match": "title",
+          "keywords": [
+            "forum",
+            "community",
+            "discussion",
+            "社区",
+            "论坛"
+          ],
+          "weight": 10
         }
       ]
     },
     "学习资源/在线课程": {
       "rules": [
-        { 
-          "match": "domain", 
-          "keywords": ["coursera.org", "udacity.com", "edx.org", "khanacademy.org"], 
-          "weight": 15 
+        {
+          "match": "domain",
+          "keywords": [
+            "coursera.org",
+            "udacity.com",
+            "edx.org",
+            "khanacademy.org"
+          ],
+          "weight": 15
         },
-        { 
-          "match": "title", 
-          "keywords": ["course", "tutorial", "learning", "education", "课程", "教程"], 
-          "weight": 10 
+        {
+          "match": "title",
+          "keywords": [
+            "course",
+            "tutorial",
+            "learning",
+            "education",
+            "课程",
+            "教程"
+          ],
+          "weight": 10
         }
       ]
     },
     "求职 & 职场/招聘平台": {
       "rules": [
-        { 
-          "match": "domain", 
-          "keywords": ["linkedin.com", "indeed.com", "glassdoor.com", "zhipin.com"], 
-          "weight": 15 
+        {
+          "match": "domain",
+          "keywords": [
+            "linkedin.com",
+            "indeed.com",
+            "glassdoor.com",
+            "zhipin.com"
+          ],
+          "weight": 15
         },
-        { 
-          "match": "title", 
-          "keywords": ["job", "career", "hiring", "recruitment", "招聘", "求职"], 
-          "weight": 10 
+        {
+          "match": "title",
+          "keywords": [
+            "job",
+            "career",
+            "hiring",
+            "recruitment",
+            "招聘",
+            "求职"
+          ],
+          "weight": 10
         }
       ]
     },
     "娱乐 & 生活/视频娱乐": {
       "rules": [
-        { 
-          "match": "domain", 
-          "keywords": ["youtube.com", "bilibili.com", "netflix.com", "twitch.tv"], 
-          "weight": 12 
+        {
+          "match": "domain",
+          "keywords": [
+            "youtube.com",
+            "bilibili.com",
+            "netflix.com",
+            "twitch.tv"
+          ],
+          "weight": 12
         },
-        { 
-          "match": "title", 
-          "keywords": ["video", "movie", "entertainment", "视频", "电影", "娱乐"], 
-          "weight": 8 
+        {
+          "match": "title",
+          "keywords": [
+            "video",
+            "movie",
+            "entertainment",
+            "视频",
+            "电影",
+            "娱乐"
+          ],
+          "weight": 8
         }
       ]
     },
     "稍后阅读": {
       "rules": [
-        { 
-          "match": "title", 
-          "keywords": ["稍后", "later", "read later", "bookmark", "待读"], 
-          "weight": 10 
+        {
+          "match": "title",
+          "keywords": [
+            "稍后",
+            "later",
+            "read later",
+            "bookmark",
+            "待读"
+          ],
+          "weight": 10
         }
       ]
     }
   },
-
   "adaptive_learning_config": {
     "min_feedback_threshold": 5,
     "confidence_adjustment_factor": 0.15,
@@ -370,12 +712,17 @@
     "pattern_strength_decay": 0.95,
     "learning_window_days": 30
   },
-
   "duplicate_detection_config": {
     "url_similarity_threshold": 0.9,
     "title_similarity_threshold": 0.8,
     "content_hash_enabled": true,
     "domain_grouping_enabled": true,
-    "ignore_parameters": ["utm_source", "utm_medium", "utm_campaign", "fbclid", "gclid"]
+    "ignore_parameters": [
+      "utm_source",
+      "utm_medium",
+      "utm_campaign",
+      "fbclid",
+      "gclid"
+    ]
   }
 }
