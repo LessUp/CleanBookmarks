@@ -203,17 +203,14 @@ class EnhancedBookmarkProcessor:
         return organized
     
     def generate_outputs(self, organized_data: Dict, output_dir: str = "tests/output"):
-        """Generate HTML and Markdown outputs"""
+        """Generate HTML output (Markdown 已移除)"""
         os.makedirs(output_dir, exist_ok=True)
         
         # Generate HTML
         html_file = os.path.join(output_dir, "bookmarks_advanced.html")
         self._generate_html(organized_data, html_file)
         
-        # Generate Markdown
-        md_file = os.path.join(output_dir, "bookmarks_advanced.md")
-        self._generate_markdown(organized_data, md_file)
-        
+
         # Generate statistics report
         stats_file = os.path.join(output_dir, "classification_stats.json")
         self._generate_stats_report(stats_file)

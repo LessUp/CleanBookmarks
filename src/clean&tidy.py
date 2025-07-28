@@ -414,7 +414,7 @@ def main():
     parser.add_argument('-i', '--input', nargs='+', default=[], help='输入的HTML书签文件路径。')
     parser.add_argument('-c', '--config', default='config.json', help='分类规则的JSON配置文件路径。')
     parser.add_argument('--output-html', default='tests/output/bookmarks_cleaned.html', help='输出的HTML文件路径。')
-    parser.add_argument('--output-md', default='tests/output/bookmarks.md', help='输出的Markdown文件路径。')
+
     args = parser.parse_args()
 
     input_files = args.input if args.input else glob.glob('tests/input/*.html')
@@ -428,7 +428,7 @@ def main():
     
     config_file = args.config
     output_html_file = args.output_html
-    output_md_file = args.output_md
+
 
     output_dir = os.path.dirname(output_html_file)
     if output_dir and not os.path.exists(output_dir):
@@ -454,8 +454,8 @@ def main():
     
     print_statistics(structured_data, total_links_found, len(seen_urls))
     
-    print(f"📝 正在生成 Markdown 输出: {output_md_file}")
-    generate_markdown(structured_data, output_md_file, config)
+
+
     
     print(f"🌐 正在生成 HTML 输出: {output_html_file}")
     create_bookmark_html(structured_data, output_html_file, config)
