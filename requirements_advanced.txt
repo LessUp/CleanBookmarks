@@ -10,3 +10,11 @@ pandas
 requests
 tqdm
 click
+psutil
+joblib
+watchdog
+pyyaml
+jsonschema
+rich
+pytest
+pytest-cov
