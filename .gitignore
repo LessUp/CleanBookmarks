@@ -99,3 +99,6 @@ output/report_20250729_164601.md
 logs/ai_classifier.log
 logs/ai_classifier.log
 .gitignore
+output/
+logs/
+results/
