@@ -1,4 +1,13 @@
 {
+  "ai_settings": {
+    "confidence_threshold": 0.7,
+    "use_semantic_analysis": true,
+    "use_user_profiling": true,
+    "cache_size": 10000,
+    "max_workers": 4,
+    "enable_learning": true
+  },
+
   "title_cleaning_rules": {
     "prefixes": ["登录 |", "Sign in ·", "登录 "],
     "suffixes": ["- V2EX", "· GitHub", "| Microsoft Learn", " - 知乎", " - 简书", " | 酷 壳 - CoolShell"],
