@@ -81,27 +81,18 @@ class AIBookmarkClassifier:
         self.enable_ml = enable_ml
         self.logger = logging.getLogger(__name__)
         
-        # 加载配置
-        self.config = self._load_config()
+        # 延迟初始化组件以提高启动性能
+        self._config = None
+        self._rule_engine = None
+        self._semantic_analyzer = None
+        self._user_profiler = None
+        self._performance_monitor = None
+        self._ml_classifier = None
         
-        # 初始化组件
-        self.rule_engine = RuleEngine(self.config)
-        self.semantic_analyzer = SemanticAnalyzer()
-        self.user_profiler = UserProfiler()
-        self.performance_monitor = PerformanceMonitor()
-        
-        # 机器学习组件（可选）
-        self.ml_classifier = None
-        if enable_ml:
-            try:
-                self.ml_classifier = MLClassifierWrapper()
-                self.logger.info("机器学习组件已启用")
-            except Exception as e:
-                self.logger.warning(f"机器学习组件初始化失败: {e}")
-        
-        # 缓存系统
+        # 缓存系统 - 优化缓存大小和策略
         self.feature_cache = {}
         self.classification_cache = {}
+        self._max_cache_size = 5000
         
         # 统计信息
         self.stats = {
@@ -111,6 +102,52 @@ class AIBookmarkClassifier:
             'cache_hits': 0,
             'average_confidence': 0.0
         }
+    
+    @property
+    def config(self):
+        """延迟加载配置"""
+        if self._config is None:
+            self._config = self._load_config()
+        return self._config
+    
+    @property 
+    def rule_engine(self):
+        """延迟加载规则引擎"""
+        if self._rule_engine is None:
+            self._rule_engine = RuleEngine(self.config)
+        return self._rule_engine
+    
+    @property
+    def semantic_analyzer(self):
+        """延迟加载语义分析器"""
+        if self._semantic_analyzer is None:
+            self._semantic_analyzer = SemanticAnalyzer()
+        return self._semantic_analyzer
+    
+    @property
+    def user_profiler(self):
+        """延迟加载用户画像"""
+        if self._user_profiler is None:
+            self._user_profiler = UserProfiler()
+        return self._user_profiler
+    
+    @property
+    def performance_monitor(self):
+        """延迟加载性能监控"""
+        if self._performance_monitor is None:
+            self._performance_monitor = PerformanceMonitor()
+        return self._performance_monitor
+    
+    @property
+    def ml_classifier(self):
+        """延迟加载ML分类器"""
+        if self._ml_classifier is None and self.enable_ml:
+            try:
+                self._ml_classifier = MLClassifierWrapper()
+                self.logger.info("机器学习组件已启用")
+            except Exception as e:
+                self.logger.warning(f"机器学习组件初始化失败: {e}")
+        return self._ml_classifier
     
     def _load_config(self) -> Dict:
         """加载配置文件"""
@@ -201,7 +238,7 @@ class AIBookmarkClassifier:
             )
     
     def classify(self, url: str, title: str) -> ClassificationResult:
-        """智能分类主方法"""
+        """优化的智能分类主方法"""
         start_time = datetime.now()
         
         # 检查缓存
@@ -215,30 +252,37 @@ class AIBookmarkClassifier:
         # 提取特征
         features = self.extract_features(url, title)
         
+        # 快速路径：优先使用规则引擎
+        rule_result = self.rule_engine.classify(features)
+        if rule_result and rule_result.confidence >= 0.85:  # 高置信度直接返回
+            rule_result.processing_time = (datetime.now() - start_time).total_seconds()
+            self.stats['rule_predictions'] += 1
+            self._cache_result(cache_key, rule_result)
+            return rule_result
+        
         # 多方法分类和融合
         results = []
-        
-        # 1. 基于规则的快速分类
-        rule_result = self.rule_engine.classify(features)
         if rule_result:
             results.append(rule_result)
             self.stats['rule_predictions'] += 1
         
-        # 2. 机器学习分类
-        if self.ml_classifier:
+        # 2. 机器学习分类（仅在必要时）
+        if self.ml_classifier and (not results or max(r.confidence for r in results) < 0.7):
             ml_result = self.ml_classifier.classify(features)
             if ml_result:
                 results.append(ml_result)
                 self.stats['ml_predictions'] += 1
         
-        # 3. 语义分析
-        if self.config.get('ai_settings', {}).get('use_semantic_analysis', True):
+        # 3. 语义分析（仅在其他方法不足时）
+        if (not results or max(r.confidence for r in results) < 0.6) and \
+           self.config.get('ai_settings', {}).get('use_semantic_analysis', True):
             semantic_result = self.semantic_analyzer.classify(features)
             if semantic_result:
                 results.append(semantic_result)
         
-        # 4. 用户行为分析
-        if self.config.get('ai_settings', {}).get('use_user_profiling', True):
+        # 4. 用户画像分析（最后备选）
+        if (not results or max(r.confidence for r in results) < 0.5) and \
+           self.config.get('ai_settings', {}).get('use_user_profiling', True):
             user_result = self.user_profiler.classify(features)
             if user_result:
                 results.append(user_result)
@@ -253,10 +297,18 @@ class AIBookmarkClassifier:
         self._update_stats(final_result)
         
         # 缓存结果
-        if len(self.classification_cache) < self.config.get('ai_settings', {}).get('cache_size', 10000):
-            self.classification_cache[cache_key] = final_result
+        self._cache_result(cache_key, final_result)
         
         return final_result
+    
+    def _cache_result(self, cache_key: str, result: ClassificationResult):
+        """缓存分类结果"""
+        if len(self.classification_cache) >= self._max_cache_size:
+            # 简单的LRU策略：移除第一个（最旧的）缓存项
+            oldest_key = next(iter(self.classification_cache))
+            del self.classification_cache[oldest_key]
+        
+        self.classification_cache[cache_key] = result
     
     def _ensemble_classification(self, results: List[ClassificationResult], features: BookmarkFeatures) -> ClassificationResult:
         """集成多个分类结果"""
