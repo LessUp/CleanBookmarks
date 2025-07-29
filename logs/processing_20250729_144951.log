@@ -1,7 +1,0 @@
-2025-07-29 14:49:51,278 - src.enhanced_clean_tidy - INFO - 开始处理书签...
-2025-07-29 14:49:51,279 - src.enhanced_clean_tidy - INFO - 开始加载 1 个书签文件...
-2025-07-29 14:49:51,284 - src.enhanced_clean_tidy - INFO - 从 C:\Users\shuai\AppData\Local\Temp\tmpalobfpqd\bookmarks.html 加载了 3 个书签
-2025-07-29 14:49:51,286 - src.enhanced_clean_tidy - INFO - 总共加载了 3 个书签
-2025-07-29 14:49:51,294 - src.enhanced_clean_tidy - INFO - 处理完成: 3 个书签分类完成
-2025-07-29 14:49:51,295 - src.enhanced_clean_tidy - INFO - 处理速度: 196.81 书签/秒
-2025-07-29 14:49:51,296 - src.enhanced_clean_tidy - INFO - 平均置信度: 0.961
