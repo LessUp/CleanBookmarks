@@ -254,11 +254,20 @@ class AIBookmarkClassifier:
         
         # 快速路径：优先使用规则引擎
         rule_result = self.rule_engine.classify(features)
-        if rule_result and rule_result.confidence >= 0.85:  # 高置信度直接返回
-            rule_result.processing_time = (datetime.now() - start_time).total_seconds()
+        if rule_result and rule_result.get('confidence', 0.0) >= 0.85:  # 高置信度直接返回
+            # 转换字典结果为ClassificationResult对象
+            classification_result = ClassificationResult(
+                category=rule_result.get('category', '未分类'),
+                confidence=rule_result.get('confidence', 0.0),
+                subcategory=rule_result.get('subcategory'),
+                reasoning=rule_result.get('reasoning', []),
+                alternatives=rule_result.get('alternatives', []),
+                processing_time=(datetime.now() - start_time).total_seconds(),
+                method=rule_result.get('method', 'rule_engine')
+            )
             self.stats['rule_predictions'] += 1
-            self._cache_result(cache_key, rule_result)
-            return rule_result
+            self._cache_result(cache_key, classification_result)
+            return classification_result
         
         # 多方法分类和融合
         results = []
@@ -267,21 +276,21 @@ class AIBookmarkClassifier:
             self.stats['rule_predictions'] += 1
         
         # 2. 机器学习分类（仅在必要时）
-        if self.ml_classifier and (not results or max(r.confidence for r in results) < 0.7):
+        if self.ml_classifier and (not results or max(r.get('confidence', 0.0) if isinstance(r, dict) else r.confidence for r in results) < 0.7):
             ml_result = self.ml_classifier.classify(features)
             if ml_result:
                 results.append(ml_result)
                 self.stats['ml_predictions'] += 1
         
         # 3. 语义分析（仅在其他方法不足时）
-        if (not results or max(r.confidence for r in results) < 0.6) and \
+        if (not results or max(r.get('confidence', 0.0) if isinstance(r, dict) else r.confidence for r in results) < 0.6) and \
            self.config.get('ai_settings', {}).get('use_semantic_analysis', True):
             semantic_result = self.semantic_analyzer.classify(features)
             if semantic_result:
                 results.append(semantic_result)
         
         # 4. 用户画像分析（最后备选）
-        if (not results or max(r.confidence for r in results) < 0.5) and \
+        if (not results or max(r.get('confidence', 0.0) if isinstance(r, dict) else r.confidence for r in results) < 0.5) and \
            self.config.get('ai_settings', {}).get('use_user_profiling', True):
             user_result = self.user_profiler.classify(features)
             if user_result:
