@@ -4,14 +4,14 @@ Bookmark Processor - 书签处理器
 负责批量处理书签文件，协调各个组件完成整个分类流程
 """
 
-import os
 import json
 import logging
+import os
+import time
 from typing import List, Dict, Optional, Tuple
 from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
-import time
 
 from bs4 import BeautifulSoup
 from .ai_classifier import AIBookmarkClassifier
@@ -32,10 +32,18 @@ class BookmarkProcessor:
         self.logger = logging.getLogger(__name__)
         
         # 初始化组件
+        try:
+            with open(config_path, 'r', encoding='utf-8') as f:
+                self.config = json.load(f)
+        except (FileNotFoundError, json.JSONDecodeError) as e:
+            self.logger.error(f"无法加载或解析配置文件 {config_path}: {e}")
+            self.config = {}
+
+        # 初始化组件
         self.classifier = AIBookmarkClassifier(config_path, enable_ml=use_ml)
         self.deduplicator = BookmarkDeduplicator()
         self.health_checker = HealthChecker()
-        self.exporter = DataExporter()
+        self.exporter = DataExporter(config=self.config)
         
         # 处理统计
         self.stats = {
@@ -210,20 +218,47 @@ class BookmarkProcessor:
         """组织书签为层次结构"""
         organized = {}
         
+        # 分类名称标准化映射
+        category_mapping = {
+            '新闻/资讯': '资讯',
+            '技术资料': '技术资料',
+            '技术/编程': '技术/编程',
+            # 可以根需要添加更多映射
+        }
+        
         for bookmark in classified_bookmarks:
             category = bookmark['category']
             subcategory = bookmark.get('subcategory')
             
-            # 创建分类结构
-            if category not in organized:
-                organized[category] = {'_items': [], '_subcategories': {}}
+            # 标准化分类名称
+            category = category_mapping.get(category, category)
             
-            if subcategory:
-                if subcategory not in organized[category]['_subcategories']:
-                    organized[category]['_subcategories'][subcategory] = {'_items': []}
-                organized[category]['_subcategories'][subcategory]['_items'].append(bookmark)
+            # 处理带斜杠的分类名称（如AI/模型与平台）
+            if '/' in category:
+                parts = category.split('/', 1)
+                main_category = parts[0].strip()
+                sub_category = parts[1].strip()
+                
+                # 创建主分类
+                if main_category not in organized:
+                    organized[main_category] = {'_items': [], '_subcategories': {}}
+                
+                # 创建子分类
+                if sub_category not in organized[main_category]['_subcategories']:
+                    organized[main_category]['_subcategories'][sub_category] = {'_items': []}
+                
+                organized[main_category]['_subcategories'][sub_category]['_items'].append(bookmark)
             else:
-                organized[category]['_items'].append(bookmark)
+                # 处理传统的单层分类
+                if category not in organized:
+                    organized[category] = {'_items': [], '_subcategories': {}}
+                
+                if subcategory:
+                    if subcategory not in organized[category]['_subcategories']:
+                        organized[category]['_subcategories'][subcategory] = {'_items': []}
+                    organized[category]['_subcategories'][subcategory]['_items'].append(bookmark)
+                else:
+                    organized[category]['_items'].append(bookmark)
         
         # 按置信度排序
         for category_data in organized.values():

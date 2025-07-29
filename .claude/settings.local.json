@@ -11,7 +11,8 @@
       "Bash(python:*)",
       "Bash(pip install:*)",
       "Bash(find:*)",
-      "Bash(grep:*)"
+      "Bash(grep:*)",
+      "Bash(ls:*)"
     ],
     "deny": []
   }

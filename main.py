@@ -9,6 +9,7 @@ import os
 import sys
 import argparse
 import logging
+import glob
 from pathlib import Path
 
 # 添加项目路径
@@ -78,7 +79,26 @@ def main():
             from src.health_checker import run_health_check
             run_health_check()
         elif args.input:
-            # 批处理模式
+            # 批处理模式 - 展开通配符
+            input_files = []
+            for pattern in args.input:
+                if '*' in pattern or '?' in pattern:
+                    # 展开通配符
+                    expanded = glob.glob(pattern)
+                    if expanded:
+                        input_files.extend(expanded)
+                    else:
+                        logger.warning(f"没有找到匹配模式的文件: {pattern}")
+                else:
+                    # 直接文件路径
+                    input_files.append(pattern)
+            
+            if not input_files:
+                logger.error("没有找到有效的输入文件")
+                return
+            
+            logger.info(f"将处理 {len(input_files)} 个文件: {input_files}")
+            
             processor = BookmarkProcessor(
                 config_path=args.config,
                 max_workers=args.workers,
@@ -86,12 +106,12 @@ def main():
             )
             
             results = processor.process_files(
-                input_files=args.input,
+                input_files=input_files,
                 output_dir=args.output,
                 train_models=args.train
             )
             
-            logger.info(f"处理完成: {results['processed_count']} 个书签已分类")
+            logger.info(f"处理完成: {results['processed_bookmarks']} 个书签已分类")
         else:
             # 显示帮助
             parser.print_help()

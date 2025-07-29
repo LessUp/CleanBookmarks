@@ -39,7 +39,7 @@ class SemanticAnalyzer:
                 "documentation", "reference", "manual", "book", "article",
                 "教程", "课程", "学习", "教育", "文档", "指南", "手册"
             ],
-            "新闻/资讯": [
+            "资讯": [
                 "news", "article", "blog", "post", "update", "information",
                 "media", "press", "report", "story", "breaking",
                 "新闻", "资讯", "博客", "文章", "报道", "媒体"
@@ -1426,6 +1426,7 @@ class HealthChecker:
 import json
 import csv
 import xml.etree.ElementTree as ET
+from typing import Optional, Dict
 from xml.dom import minidom
 from typing import Dict, List, Optional, Any
 from datetime import datetime
@@ -1434,8 +1435,8 @@ import re
 
 class DataExporter:
     """数据导出器 - 支持多种格式的书签导出"""
-    
-    def __init__(self):
+    def __init__(self, config: Optional[Dict] = None):
+        self.config = config or {}
         self.supported_formats = ['html', 'json', 'markdown', 'csv', 'xml', 'opml']
         self.export_timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     
@@ -1513,6 +1514,9 @@ class DataExporter:
     
     def _get_confidence_indicator(self, confidence: float) -> str:
         """获取置信度指示符"""
+        if not self.config.get('show_confidence_indicator', True):
+            return ''
+
         if confidence >= 0.9:
             return '🟢'  # 爱心
         elif confidence >= 0.7:
