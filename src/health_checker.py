@@ -13,6 +13,14 @@ from pathlib import Path
 
 def run_health_check():
     """运行系统健康检查"""
+    import sys
+    import os
+    
+    # 添加当前目录到Python路径
+    current_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    if current_dir not in sys.path:
+        sys.path.insert(0, current_dir)
+    
     logger = logging.getLogger(__name__)
     
     print("AI智能书签分类系统 - 健康检查")
@@ -29,17 +37,18 @@ def run_health_check():
     
     # 2. 检查依赖包
     required_packages = [
-        'beautifulsoup4', 'lxml', 'rich', 'numpy', 'scikit-learn'
+        ('beautifulsoup4', 'bs4'), ('lxml', 'lxml'), ('rich', 'rich'), 
+        ('numpy', 'numpy'), ('scikit-learn', 'sklearn')
     ]
     
     missing_packages = []
-    for package in required_packages:
+    for package_name, import_name in required_packages:
         try:
-            __import__(package.replace('-', '_'))
-            print(f"[OK] 依赖包: {package}")
+            __import__(import_name)
+            print(f"[OK] 依赖包: {package_name}")
         except ImportError:
-            missing_packages.append(package)
-            issues.append(f"[ERROR] 缺少依赖包: {package}")
+            missing_packages.append(package_name)
+            issues.append(f"[ERROR] 缺少依赖包: {package_name}")
     
     if missing_packages:
         print(f"\n安装缺少的依赖包:")

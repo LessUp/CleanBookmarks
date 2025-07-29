@@ -42,7 +42,7 @@ try:
     jieba.setLogLevel(logging.WARNING)
     
     # 语言检测
-    from langdetect import detect, LangDetectError
+    from langdetect import detect, LangDetectException
     
     ML_AVAILABLE = True
 except ImportError as e:
@@ -91,24 +91,29 @@ class BookmarkFeatureExtractor(BaseEstimator, TransformerMixin):
         self.max_features = max_features
         self.use_chinese = use_chinese
         
-        # 文本向量化器
+        # 文本向量化器 - 修复空词汇表问题
         self.title_vectorizer = TfidfVectorizer(
             max_features=max_features//2,
-            stop_words='english',
+            stop_words=None,  # 不使用停用词过滤
             ngram_range=(1, 2),
-            lowercase=True
+            lowercase=True,
+            min_df=1,  # 最小文档频率为1
+            token_pattern=r'\b\w+\b'  # 更宽松的token模式
         )
         
         self.domain_vectorizer = CountVectorizer(
             max_features=max_features//4,
-            lowercase=True
+            lowercase=True,
+            min_df=1,  # 最小文档频率为1
+            token_pattern=r'\b\w+\b'
         )
         
         self.url_vectorizer = TfidfVectorizer(
             max_features=max_features//4,
             analyzer='char_wb',
-            ngram_range=(2, 4),
-            lowercase=True
+            ngram_range=(3, 5),
+            lowercase=True,
+            min_df=1  # 最小文档频率为1
         )
         
         # 编码器

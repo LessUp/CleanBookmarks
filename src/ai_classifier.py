@@ -282,10 +282,23 @@ class AIBookmarkClassifier:
         }
         
         for result in results:
-            weight = method_weights.get(result.method, 0.1)
-            category_scores[result.category] += result.confidence * weight
-            all_reasoning.extend(result.reasoning)
-            methods_used.append(result.method)
+            if isinstance(result, dict):
+                # 处理字典类型的结果
+                method = result.get('method', 'unknown')
+                category = result.get('category', '未分类')
+                confidence = result.get('confidence', 0.0)
+                reasoning = result.get('reasoning', [])
+            else:
+                # 处理ClassificationResult对象
+                method = result.method
+                category = result.category
+                confidence = result.confidence
+                reasoning = result.reasoning
+            
+            weight = method_weights.get(method, 0.1)
+            category_scores[category] += confidence * weight
+            all_reasoning.extend(reasoning)
+            methods_used.append(method)
         
         # 选择最佳分类
         if not category_scores:
