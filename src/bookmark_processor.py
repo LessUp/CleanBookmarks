@@ -323,78 +323,97 @@ class BookmarkProcessor:
             return None
     
     def _organize_bookmarks(self, classified_bookmarks: List[Dict]) -> Dict:
-        """组织书签为层次结构"""
+        """组织书签为层次结构（最终修复版：统一、大小写不敏感、合并逻辑）"""
         organized = {}
         
-        # 分类名称标准化映射
+        # 更全面的分类名称标准化映射 (所有key均为小写)
         category_mapping = {
-            'AI': '🤖 AI',
-            'AI/模型与平台': '🤖 AI/模型平台',
-            'AI/应用与工具': '🤖 AI/应用工具', 
-            'AI/论文与资讯': '🤖 AI/论文资讯',
+            'ai': '🤖 AI',
+            '人工智能': '🤖 AI',
+            'ai/模型与平台': '🤖 AI/模型平台',
+            'ai/应用与工具': '🤖 AI/应用工具', 
+            'ai/论文与资讯': '🤖 AI/论文资讯',
+            'ai/机器学习': '🤖 AI/机器学习',
+
             '技术栈': '💻 编程',
+            '技术/编程': '💻 编程',
+            '编程开发': '💻 编程',
+            '编程': '💻 编程',
             '技术栈/代码 & 开源': '💻 编程/代码仓库',
             '技术栈/编程语言': '💻 编程/编程语言',
-            '技术栈/Web开发': '💻 编程/Web开发',
-            '技术栈/云服务 & DevOps': '💻 编程/DevOps运维',
-            'Books': '📚 学习/书籍手册',
-            '技术资料': '📚 学习/技术文档',
-            'Lectures': '📚 学习/课程讲座',
-            '社区': '👥 社区',
-            '资讯': '📰 资讯',
-            'Utils': '🛠️ 工具',
-            '娱乐': '🎮 娱乐',
-            '求职': '💼 求职',
-            '未分类': '📂 其他',
-            '新闻/资讯': '📰 资讯',
-            '技术/编程': '💻 编程',
+            '技术栈/web开发': '💻 编程/Web开发',
+            '技术栈/云服务 & devops': '💻 编程/DevOps运维',
+
             '学习': '📚 学习',
-            '生物信息': '🧬 生物',
-            '人工智能': '🤖 AI',
-            '编程开发': '💻 编程',
             '学习资料': '📚 学习',
-            '技术社区': '👥 社区',
-            '资讯媒体': '📰 资讯',
+            '技术资料': '📚 学习/技术文档',
+            'books': '📚 学习/书籍手册',
+            'lectures': '📚 学习/课程讲座',
+            '教育': '📚 学习/教育',
+
+            '工具': '🛠️ 工具',
+            'utils': '🛠️ 工具',
             '实用工具': '🛠️ 工具',
+            '软件': '🛠️ 工具/软件',
+            '在线服务': '🛠️ 工具/在线服务',
+            '软件下载': '🛠️ 工具/软件下载',
+            '文档资料': '📚 学习/文档资料',
+
+            '社区': '👥 社区',
+            '技术社区': '👥 社区',
+            '资讯': '📰 资讯',
+            '新闻/资讯': '📰 资讯',
+            '资讯媒体': '📰 资讯',
+            '娱乐': '🎮 娱乐',
             '娱乐休闲': '🎮 娱乐',
-            '稍后阅读': '📖 稍读',
+            '求职': '💼 求职',
             '求职招聘': '💼 求职',
+            '生物信息': '🧬 生物',
+            '生物': '🧬 生物',
+            '稍后阅读': '📖 稍读',
+            '未分类': '📂 其他',
             '其他分类': '📂 其他',
         }
-        
+
+        def get_standard_category(name: str) -> str:
+            """获取标准化的分类名，大小写不敏感"""
+            return category_mapping.get(name.lower(), name)
+
         for bookmark in classified_bookmarks:
-            category = bookmark['category']
-            subcategory = bookmark.get('subcategory')
+            raw_category_name = bookmark.get('category', '未分类').strip()
+            raw_subcategory_name = bookmark.get('subcategory')
+            if raw_subcategory_name:
+                raw_subcategory_name = raw_subcategory_name.strip()
+
+            # --- 核心逻辑 ---
+            # 1. 标准化分类名称
+            std_full_name = get_standard_category(raw_category_name)
+
+            # 2. 解析主分类和子分类
+            main_category = std_full_name
+            sub_category_from_name = None
             
-            # 标准化分类名称
-            category = category_mapping.get(category, category)
-            
-            # 处理带斜杠的分类名称（如AI/模型与平台）
-            if '/' in category:
-                parts = category.split('/', 1)
+            if '/' in std_full_name:
+                parts = std_full_name.split('/', 1)
                 main_category = parts[0].strip()
-                sub_category = parts[1].strip()
-                
-                # 创建主分类
-                if main_category not in organized:
-                    organized[main_category] = {'_items': [], '_subcategories': {}}
-                
-                # 创建子分类
-                if sub_category not in organized[main_category]['_subcategories']:
-                    organized[main_category]['_subcategories'][sub_category] = {'_items': []}
-                
-                organized[main_category]['_subcategories'][sub_category]['_items'].append(bookmark)
+                sub_category_from_name = parts[1].strip()
+
+            # 3. 确定最终的子分类
+            final_subcategory = raw_subcategory_name or sub_category_from_name
+
+            # 4. 确保主分类在organized字典中存在
+            if main_category not in organized:
+                organized[main_category] = {'_items': [], '_subcategories': {}}
+
+            # 5. 将书签放入正确的位置
+            if final_subcategory:
+                # 放入子分类
+                if final_subcategory not in organized[main_category]['_subcategories']:
+                    organized[main_category]['_subcategories'][final_subcategory] = {'_items': []}
+                organized[main_category]['_subcategories'][final_subcategory]['_items'].append(bookmark)
             else:
-                # 处理传统的单层分类
-                if category not in organized:
-                    organized[category] = {'_items': [], '_subcategories': {}}
-                
-                if subcategory:
-                    if subcategory not in organized[category]['_subcategories']:
-                        organized[category]['_subcategories'][subcategory] = {'_items': []}
-                    organized[category]['_subcategories'][subcategory]['_items'].append(bookmark)
-                else:
-                    organized[category]['_items'].append(bookmark)
+                # 放入主分类
+                organized[main_category]['_items'].append(bookmark)
         
         # 按置信度排序
         for category_data in organized.values():
@@ -409,6 +428,9 @@ class BookmarkProcessor:
         """优化的导出处理结果"""
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         
+        # 在导出前获取最终的统计数据
+        final_stats = self.get_statistics()
+
         # 并行导出多种格式以节省时间
         export_tasks = [
             ('html', f"bookmarks_{timestamp}.html"),
@@ -423,11 +445,11 @@ class BookmarkProcessor:
                 output_file = os.path.join(output_dir, filename)
                 
                 if format_type == 'html':
-                    future = executor.submit(self.exporter.export_html, organized_bookmarks, output_file)
+                    future = executor.submit(self.exporter.export_html, organized_bookmarks, output_file, final_stats)
                 elif format_type == 'json':
-                    future = executor.submit(self.exporter.export_json, organized_bookmarks, output_file, self.stats)
+                    future = executor.submit(self.exporter.export_json, organized_bookmarks, output_file, final_stats)
                 elif format_type == 'markdown':
-                    future = executor.submit(self.exporter.export_markdown, organized_bookmarks, output_file, self.stats)
+                    future = executor.submit(self.exporter.export_markdown, organized_bookmarks, output_file, final_stats)
                 
                 futures.append(future)
             
@@ -449,20 +471,21 @@ class BookmarkProcessor:
         self.logger.info("开始训练机器学习模型...")
         
         # 准备训练数据
-        training_data = []
-        labels = []
-        
+        samples_added = 0
         for bookmark in classified_bookmarks:
-            if bookmark['confidence'] > 0.8:  # 只使用高置信度的数据训练
+            if bookmark.get('confidence', 0.0) > 0.8:  # 只使用高置信度的数据训练
                 features = self.classifier.extract_features(bookmark['url'], bookmark['title'])
-                training_data.append(features)
-                labels.append(bookmark['category'])
+                self.classifier.ml_classifier.add_training_sample(features, bookmark['category'])
+                samples_added += 1
         
-        if len(training_data) > 50:  # 需要足够的训练数据
-            self.classifier.ml_classifier.train(training_data, labels)
-            self.logger.info(f"模型训练完成，使用了 {len(training_data)} 个样本")
+        if samples_added > 50:  # 需要足够的训练数据
+            self.logger.info(f"使用 {samples_added} 个样本进行训练...")
+            if self.classifier.ml_classifier.train_model():
+                self.logger.info(f"模型训练完成。")
+            else:
+                self.logger.error("模型训练失败。")
         else:
-            self.logger.warning(f"训练数据不足 ({len(training_data)} 个样本)，跳过训练")
+            self.logger.warning(f"训练数据不足 ({samples_added} 个样本)，跳过训练")
     
     def health_check(self, bookmarks: List[Dict]) -> Dict:
         """对书签进行健康检查"""
@@ -477,12 +500,20 @@ class BookmarkProcessor:
     
     def get_statistics(self) -> Dict:
         """获取处理统计信息"""
-        classifier_stats = self.classifier.get_statistics()
-        
+        # 确保分类器已经被初始化
+        if self._classifier:
+            classifier_stats = self.classifier.get_statistics()
+        else:
+            classifier_stats = {}
+
+        # 计算处理速度和成功率
+        processing_time = self.stats.get('processing_time', 0.0)
+        processed_bookmarks = self.stats.get('processed_bookmarks', 0)
+        total_bookmarks = self.stats.get('total_bookmarks', 1)
+
         return {
             **self.stats,
             'classifier_stats': classifier_stats,
-            'processing_speed': self.stats['processed_bookmarks'] / max(self.stats['processing_time'], 0.001),
-            'success_rate': (self.stats['processed_bookmarks'] / max(self.stats['total_bookmarks'], 1)) * 100,
-            'average_confidence': classifier_stats.get('average_confidence', 0.0)
+            'processing_speed_bps': processed_bookmarks / max(processing_time, 0.001), # bookmarks per second
+            'success_rate_percent': (processed_bookmarks / max(total_bookmarks, 1)) * 100,
         }

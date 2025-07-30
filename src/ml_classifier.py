@@ -204,9 +204,26 @@ class BookmarkFeatureExtractor(BaseEstimator, TransformerMixin):
         # 数值特征
         numerical_features = self._extract_numerical_features(bookmarks)
         
-        # 分类特征编码
-        content_type_encoded = self.content_type_encoder.transform(content_types).reshape(-1, 1)
-        language_encoded = self.language_encoder.transform(languages).reshape(-1, 1)
+        # 分类特征编码 - 增加对未见标签的处理
+        def safe_transform(encoder, values):
+            """安全地转换标签，处理未见过的标签"""
+            transformed = []
+            for v in values:
+                try:
+                    # 尝试转换，如果失败则视为 "未知"
+                    transformed.append(encoder.transform([v])[0])
+                except ValueError:
+                    # 如果是未见过的标签，则查找 "unknown" 的编码值
+                    try:
+                        unknown_class = encoder.transform(['unknown'])[0]
+                        transformed.append(unknown_class)
+                    except ValueError:
+                        # 如果连 "unknown" 都没有，则使用0作为默认值
+                        transformed.append(0)
+            return np.array(transformed).reshape(-1, 1)
+
+        content_type_encoded = safe_transform(self.content_type_encoder, content_types)
+        language_encoded = safe_transform(self.language_encoder, languages)
         
         # 合并所有特征
         all_features = np.hstack([
@@ -321,7 +338,7 @@ class MLBookmarkClassifier:
         self.training_data.extend(bookmarks)
         self.training_labels.extend(categories)
         
-        self.logger.info(f"添加了 {len(bookmarks)} 个训练样本")
+        self.logger.debug(f"添加了 {len(bookmarks)} 个训练样本")
     
     def train(self, validation_split=0.2, optimize_hyperparams=False):
         """训练模型"""
@@ -341,13 +358,41 @@ class MLBookmarkClassifier:
             
             # 提取特征
             X = self.feature_extractor.fit_transform(self.training_data)
+
+            # 处理样本数过少的分类，将其合并
+            min_samples_threshold = 2
+            label_counts = Counter(self.training_labels)
             
+            small_categories = {label for label, count in label_counts.items() if count < min_samples_threshold}
+            
+            processed_labels = list(self.training_labels)
+            if small_categories:
+                self.logger.warning(
+                    f"发现 {len(small_categories)} 个类别的样本数少于 {min_samples_threshold}。"
+                    f"将把它们合并到 '_MERGED_CATEGORY_' 中: {', '.join(small_categories)}"
+                )
+                
+                # 用一个统一的分类来替换小分类
+                processed_labels = ['_MERGED_CATEGORY_' if label in small_categories else label for label in processed_labels]
+
             # 编码标签
-            y = self.label_encoder.fit_transform(self.training_labels)
+            y = self.label_encoder.fit_transform(processed_labels)
             
+            # 检查合并后是否仍有问题
+            unique_classes, class_counts = np.unique(y, return_counts=True)
+            min_samples_in_class = class_counts.min() if len(class_counts) > 0 else 0
+            
+            stratify_param = y
+            if min_samples_in_class < 2:
+                self.logger.warning(
+                    "合并后仍然存在样本数少于2的类别，无法进行分层抽样。"
+                    "将禁用分层来分割训练/验证集。"
+                )
+                stratify_param = None
+
             # 划分训练集和验证集
             X_train, X_val, y_train, y_val = train_test_split(
-                X, y, test_size=validation_split, random_state=42, stratify=y
+                X, y, test_size=validation_split, random_state=42, stratify=stratify_param
             )
             
             # 创建模型
@@ -365,14 +410,32 @@ class MLBookmarkClassifier:
                         'min_samples_split': [2, 5, 10]
                     }
                     
-                    grid_search = GridSearchCV(
-                        model, param_grid, cv=3, scoring='accuracy', n_jobs=-1
-                    )
-                    grid_search.fit(X_train, y_train)
-                    model = grid_search.best_estimator_
-                    self.models[name] = model
+                    # 动态调整CV折数以避免小类别错误
+                    from sklearn.model_selection import StratifiedKFold
                     
-                    self.logger.info(f"最佳参数: {grid_search.best_params_}")
+                    n_splits_default = 3
+                    min_samples = np.min(np.bincount(y_train))
+                    
+                    # 交叉验证折数不能超过最小类别的样本数
+                    cv_splits = n_splits_default
+                    if min_samples < n_splits_default:
+                        cv_splits = max(2, min_samples)
+                        self.logger.warning(
+                            f"最小类别的样本数 ({min_samples}) 少于默认的CV折数 ({n_splits_default})。"
+                            f"自动将CV折数调整为 {cv_splits}。"
+                        )
+
+                    if cv_splits >= 2:
+                        cv_strategy = StratifiedKFold(n_splits=cv_splits)
+                        grid_search = GridSearchCV(
+                            model, param_grid, cv=cv_strategy, scoring='accuracy', n_jobs=-1
+                        )
+                        grid_search.fit(X_train, y_train)
+                        model = grid_search.best_estimator_
+                        self.models[name] = model
+                        self.logger.info(f"最佳参数: {grid_search.best_params_}")
+                    else:
+                        self.logger.warning("由于类别样本数过少 (少于2)，跳过超参数优化。")
                 
                 # 训练模型
                 model.fit(X_train, y_train)

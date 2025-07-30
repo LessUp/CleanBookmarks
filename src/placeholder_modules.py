@@ -1448,49 +1448,70 @@ class DataExporter:
             f.write(html_content)
     
     def _generate_html_content(self, organized_bookmarks: Dict, stats: Optional[Dict] = None) -> str:
-        """生成HTML内容"""
+        """生成符合浏览器收藏夹栏规范的HTML内容，用于完全覆盖"""
         html_parts = []
         
-        # HTML头部
-        html_parts.append('''<!DOCTYPE NETSCAPE-Bookmark-file-1>
-<HTML>
-<HEAD>
-<META HTTP-EQUIV="Content-Type" CONTENT="text/html; charset=UTF-8">
-<TITLE>AI智能书签分类结果</TITLE>
-<H1>AI智能书签分类结果</H1>
-<DL><p>''')
-        
-        # 添加统计信息（如果有）
+        # HTML标准头部
+        html_parts.append('<!DOCTYPE NETSCAPE-Bookmark-file-1>')
+        html_parts.append('<!-- This is an automatically generated file.')
+        html_parts.append('     It will be read and overwritten.')
+        html_parts.append('     DO NOT EDIT! -->')
+        html_parts.append('<META HTTP-EQUIV="Content-Type" CONTENT="text/html; charset=UTF-8">')
+        html_parts.append('<TITLE>Bookmarks</TITLE>')
+        html_parts.append('<H1>Bookmarks</H1>')
+
+        # 添加统计信息注释
         if stats:
-            html_parts.append(f'<!-- 处理统计: {stats.get("processed_bookmarks", 0)} 个书签已分类 -->')
-            html_parts.append(f'<!-- 导出时间: {self.export_timestamp} -->')
-        
-        # 生成分类内容
+            html_parts.append('<!--')
+            html_parts.append(f'    Generator: AI智能书签分类系统 v2.0')
+            html_parts.append(f'    Export Time: {self.export_timestamp}')
+            html_parts.append(f'    Processed Bookmarks: {stats.get("processed_bookmarks", 0)} / {stats.get("total_bookmarks", 0)}')
+            
+            classifier_stats = stats.get('classifier_stats', {})
+            if classifier_stats:
+                methods = classifier_stats.get('classification_methods', {})
+                if methods:
+                    html_parts.append('    Classification Stats:')
+                    html_parts.append(f'      - Rule Engine: {methods.get("rule_engine", 0)}')
+                    html_parts.append(f'      - ML Classifier: {methods.get("ml_classifier", 0)}')
+                    html_parts.append(f'      - Unclassified: {methods.get("unclassified (fallback)", 0)}')
+            html_parts.append('-->')
+
+        html_parts.append('<DL><p>')
+
+        # 创建一个“收藏夹栏”文件夹
+        # PERSONAL_TOOLBAR_FOLDER="true" 是关键属性
+        html_parts.append('    <DT><H3 PERSONAL_TOOLBAR_FOLDER="true">收藏夹栏</H3>')
+        html_parts.append('    <DL><p>')
+
+        # 直接在收藏夹栏内生成分类文件夹
         for category, category_data in organized_bookmarks.items():
-            html_parts.append(f'\n    <DT><H3>{self._escape_html(category)}</H3>')
-            html_parts.append('    <DL><p>')
+            html_parts.append(f'        <DT><H3>{self._escape_html(category)}</H3>')
+            html_parts.append('        <DL><p>')
             
             # 直接在分类下的书签
             items = category_data.get('_items', [])
             for item in items:
-                html_parts.append(self._format_bookmark_html(item))
+                html_parts.append(self._format_bookmark_html(item, indent='            '))
             
             # 子分类
             subcategories = category_data.get('_subcategories', {})
             for subcat_name, subcat_data in subcategories.items():
-                html_parts.append(f'\n        <DT><H3>{self._escape_html(subcat_name)}</H3>')
-                html_parts.append('        <DL><p>')
+                html_parts.append(f'            <DT><H3>{self._escape_html(subcat_name)}</H3>')
+                html_parts.append('            <DL><p>')
                 
                 sub_items = subcat_data.get('_items', [])
                 for item in sub_items:
-                    html_parts.append(self._format_bookmark_html(item, indent='            '))
+                    html_parts.append(self._format_bookmark_html(item, indent='                '))
                 
-                html_parts.append('        </DL><p>')
+                html_parts.append('            </DL><p>')
             
-            html_parts.append('    </DL><p>')
+            html_parts.append('        </DL><p>')
         
-        # HTML尾部
-        html_parts.append('</DL><p>\n</HTML>')
+        # 闭合所有标签
+        html_parts.append('    </DL><p>') # 闭合收藏夹栏
+        html_parts.append('</DL><p>') # 闭合根
+        html_parts.append('</HTML>')
         
         return '\n'.join(html_parts)
     
@@ -1575,14 +1596,30 @@ class DataExporter:
         if stats:
             lines.append('## 📊 处理统计')
             lines.append('')
-            lines.append(f"- **处理书签数**: {stats.get('processed_bookmarks', 0)}")
-            lines.append(f"- **发现分类数**: {len(organized_bookmarks)}")
-            lines.append(f"- **处理时间**: {stats.get('processing_time', 0):.2f}秒")
-            
-            # 分类统计
+            lines.append(f"- **总书签数**: {stats.get('total_bookmarks', 0)}")
+            lines.append(f"- **已处理书签**: {stats.get('processed_bookmarks', 0)}")
+            lines.append(f"- **移除重复数**: {stats.get('duplicates_removed', 0)}")
+            lines.append(f"- **处理时间**: {stats.get('processing_time', 0):.2f} 秒")
+            lines.append(f"- **处理速度**: {stats.get('processing_speed_bps', 0):.2f} 书签/秒")
+            lines.append('')
+
+            # 分类方法统计
+            classifier_stats = stats.get('classifier_stats', {})
+            if classifier_stats:
+                lines.append('### 🤖 分类方法统计')
+                methods = classifier_stats.get('classification_methods', {})
+                if methods:
+                    total = methods.get('total', 1)
+                    lines.append(f"- **规则引擎**: {methods.get('rule_engine', 0)} ({methods.get('rule_engine', 0) / total:.1%})")
+                    lines.append(f"- **机器学习**: {methods.get('ml_classifier', 0)} ({methods.get('ml_classifier', 0) / total:.1%})")
+                    lines.append(f"- **未分类**: {methods.get('unclassified (fallback)', 0)} ({methods.get('unclassified (fallback)', 0) / total:.1%})")
+                lines.append(f"- **平均置信度**: {classifier_stats.get('average_confidence', 0):.2f}")
+                lines.append('')
+
+            # 分类分布
             categories_found = stats.get('categories_found', {})
             if categories_found:
-                lines.append(f"- **分类分布**:")
+                lines.append(f"### 📁 分类分布")
                 for category, count in sorted(categories_found.items(), key=lambda x: x[1], reverse=True):
                     lines.append(f"  - {category}: {count} 个")
             

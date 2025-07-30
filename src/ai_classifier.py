@@ -97,8 +97,11 @@ class AIBookmarkClassifier:
         # 统计信息
         self.stats = {
             'total_classified': 0,
-            'ml_predictions': 0,
-            'rule_predictions': 0,
+            'rule_engine': 0,
+            'ml_classifier': 0,
+            'semantic_analyzer': 0,
+            'user_profiler': 0,
+            'fallback': 0, # 未分类
             'cache_hits': 0,
             'average_confidence': 0.0
         }
@@ -252,52 +255,48 @@ class AIBookmarkClassifier:
         # 提取特征
         features = self.extract_features(url, title)
         
-        # 快速路径：优先使用规则引擎
-        rule_result = self.rule_engine.classify(features)
-        if rule_result and rule_result.get('confidence', 0.0) >= 0.85:  # 高置信度直接返回
-            # 转换字典结果为ClassificationResult对象
-            classification_result = ClassificationResult(
-                category=rule_result.get('category', '未分类'),
-                confidence=rule_result.get('confidence', 0.0),
-                subcategory=rule_result.get('subcategory'),
-                reasoning=rule_result.get('reasoning', []),
-                alternatives=rule_result.get('alternatives', []),
-                processing_time=(datetime.now() - start_time).total_seconds(),
-                method=rule_result.get('method', 'rule_engine')
-            )
-            self.stats['rule_predictions'] += 1
-            self._cache_result(cache_key, classification_result)
-            return classification_result
-        
         # 多方法分类和融合
         results = []
+
+        # 1. 规则引擎分类
+        rule_result = self.rule_engine.classify(features)
         if rule_result:
             results.append(rule_result)
-            self.stats['rule_predictions'] += 1
         
-        # 2. 机器学习分类（仅在必要时）
-        if self.ml_classifier and (not results or max(r.get('confidence', 0.0) if isinstance(r, dict) else r.confidence for r in results) < 0.7):
+        # 2. 机器学习分类
+        if self.ml_classifier:
+            # 直接传递特征对象，包装器会处理它
             ml_result = self.ml_classifier.classify(features)
             if ml_result:
                 results.append(ml_result)
-                self.stats['ml_predictions'] += 1
-        
-        # 3. 语义分析（仅在其他方法不足时）
-        if (not results or max(r.get('confidence', 0.0) if isinstance(r, dict) else r.confidence for r in results) < 0.6) and \
-           self.config.get('ai_settings', {}).get('use_semantic_analysis', True):
+
+        # 3. 语义分析
+        if self.config.get('ai_settings', {}).get('use_semantic_analysis', True):
             semantic_result = self.semantic_analyzer.classify(features)
             if semantic_result:
                 results.append(semantic_result)
         
-        # 4. 用户画像分析（最后备选）
-        if (not results or max(r.get('confidence', 0.0) if isinstance(r, dict) else r.confidence for r in results) < 0.5) and \
-           self.config.get('ai_settings', {}).get('use_user_profiling', True):
+        # 4. 用户画像分析
+        if self.config.get('ai_settings', {}).get('use_user_profiling', True):
             user_result = self.user_profiler.classify(features)
             if user_result:
                 results.append(user_result)
         
         # 融合多个分类结果
         final_result = self._ensemble_classification(results, features)
+        
+        # 记录最终使用的分类方法
+        final_method = final_result.method
+        if 'rule_engine' in final_method:
+            self.stats['rule_engine'] += 1
+        if 'machine_learning' in final_method: # 修正: 使用 'machine_learning'
+            self.stats['ml_classifier'] += 1
+        if 'semantic_analyzer' in final_method:
+            self.stats['semantic_analyzer'] += 1
+        if 'user_profiler' in final_method:
+            self.stats['user_profiler'] += 1
+        if final_method == 'fallback':
+            self.stats['fallback'] += 1
         
         # 记录处理时间
         final_result.processing_time = (datetime.now() - start_time).total_seconds()
@@ -337,7 +336,7 @@ class AIBookmarkClassifier:
         # 权重配置
         method_weights = {
             'rule_engine': 0.4,
-            'ml_classifier': 0.3,
+            'machine_learning': 0.3, # 修正: 使用 'machine_learning'
             'semantic_analyzer': 0.2,
             'user_profiler': 0.1
         }
@@ -475,17 +474,28 @@ class AIBookmarkClassifier:
         if cache_key in self.classification_cache:
             del self.classification_cache[cache_key]
         
-        self.logger.info(f"学习反馈: {predicted_category} -> {correct_category}")
+        self.logger.debug(f"学习反馈: {predicted_category} -> {correct_category}")
     
     def get_statistics(self) -> Dict:
         """获取分类统计"""
+        total_predictions = self.stats['rule_engine'] + self.stats['ml_classifier'] + \
+                            self.stats['semantic_analyzer'] + self.stats['user_profiler'] + \
+                            self.stats['fallback']
+        
         return {
-            **self.stats,
+            'total_classified': self.stats['total_classified'],
+            'cache_hits': self.stats['cache_hits'],
             'cache_hit_rate': self.stats['cache_hits'] / max(self.stats['total_classified'], 1),
-            'feature_cache_size': len(self.feature_cache),
-            'classification_cache_size': len(self.classification_cache),
-            'ml_enabled': self.ml_classifier is not None,
-            'performance_metrics': self.performance_monitor.get_summary()
+            'average_confidence': self.stats['average_confidence'],
+            'classification_methods': {
+                'rule_engine': self.stats['rule_engine'],
+                'ml_classifier': self.stats['ml_classifier'],
+                'semantic_analyzer': self.stats['semantic_analyzer'],
+                'user_profiler': self.stats['user_profiler'],
+                'unclassified (fallback)': self.stats['fallback'],
+                'total': total_predictions
+            },
+            'ml_enabled': self.ml_classifier is not None
         }
     
     def save_model(self, path: str = "models/ai_classifier.json"):
