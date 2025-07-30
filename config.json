@@ -8,15 +8,32 @@
     "max_workers": 4,
     "enable_learning": true
   },
-
   "title_cleaning_rules": {
-    "prefixes": ["登录 |", "Sign in ·", "登录 "],
-    "suffixes": ["- V2EX", "· GitHub", "| Microsoft Learn", " - 知乎", " - 简书", " | 酷 壳 - CoolShell"],
-    "replacements": { "&": "&", "<": "<", ">": ">", "--- ": "- ", "(7条消息)": "" }
+    "prefixes": [
+      "登录 |",
+      "Sign in ·",
+      "登录 "
+    ],
+    "suffixes": [
+      "- V2EX",
+      "· GitHub",
+      "| Microsoft Learn",
+      " - 知乎",
+      " - 简书",
+      " | 酷 壳 - CoolShell"
+    ],
+    "replacements": {
+      "&": "&",
+      "<": "<",
+      ">": ">",
+      "--- ": "- ",
+      "(7条消息)": ""
+    }
   },
-
-  "processing_order": ["priority_rules", "category_rules"],
-
+  "processing_order": [
+    "priority_rules",
+    "category_rules"
+  ],
   "category_order": [
     "💼 工作台",
     "🤖 AI",
@@ -27,143 +44,588 @@
     "📰 资讯",
     "💼 求职",
     "🎮 娱乐",
-    "🛠️ 工具",
     "📖 稍读",
     "📂 其他"
   ],
-
   "domain_grouping_rules": {
-    "🤖 AI": ["openai.com", "deepseek.com", "chatglm.cn", "huggingface.co", "labs.google", "replicate.com", "perplexity.ai", "mistral.ai"],
-    "💻 编程": ["github.com", "gitlab.com", "docker.com", "kubernetes.io", "python.org", "rust-lang.org", "go.dev"],
-    "🧬 生物": ["broadinstitute.org", "bioconda.github.io", "illumina.com", "cngb.org", "stomics.tech", "nature.com"],
-    "👥 社区": ["linux.do", "v2ex.com", "news.ycombinator.com", "reddit.com"],
-    "🛠️ 工具": ["figma.com", "canva.com", "deepl.com", "mermaid.live", "jsoncrack.com", "excalidraw.com"],
-    "💼 工作台": ["zego.im", "zego.cloud", "genomics.cn", "bgi.com", "dingtalk.com"]
+    "🤖 AI": [
+      "openai.com",
+      "deepseek.com",
+      "chatglm.cn",
+      "huggingface.co",
+      "labs.google",
+      "replicate.com",
+      "perplexity.ai",
+      "mistral.ai"
+    ],
+    "💻 编程": [
+      "github.com",
+      "gitlab.com",
+      "docker.com",
+      "kubernetes.io",
+      "python.org",
+      "rust-lang.org",
+      "go.dev"
+    ],
+    "🧬 生物": [
+      "broadinstitute.org",
+      "bioconda.github.io",
+      "illumina.com",
+      "cngb.org",
+      "stomics.tech",
+      "nature.com"
+    ],
+    "👥 社区": [
+      "linux.do",
+      "v2ex.com",
+      "news.ycombinator.com",
+      "reddit.com"
+    ],
+    "💼 工作台": [
+      "zego.im",
+      "zego.cloud",
+      "genomics.cn",
+      "bgi.com",
+      "dingtalk.com"
+    ]
   },
-
   "priority_rules": {
     "💼 工作台/司内业务": {
       "weight": 100,
       "rules": [
-        { "match": "domain", "keywords": ["zego.im", "zego.cloud", "bgi.com", "genomics.cn", "dingtalk.com"] }
+        {
+          "match": "domain",
+          "keywords": [
+            "zego.im",
+            "zego.cloud",
+            "bgi.com",
+            "genomics.cn",
+            "dingtalk.com"
+          ]
+        }
       ]
     }
   },
-
   "category_rules": {
     "🤖 AI/模型平台": {
       "rules": [
-        { "match": "domain", "keywords": ["openai.com", "huggingface.co", "cohere.com", "anthropic.com", "chatglm.cn", "hunyuan.tencent.com", "baichuan-ai.com", "mistral.ai", "reka.ai", "jina.ai", "qwen.ai", "deepseek.com"], "weight": 15 },
-        { "match": "title", "keywords": ["gpt-4", "gpt4", "claude 3", "gemini", "llama", "sora", "大模型", "llm"], "weight": 10 }
+        {
+          "match": "domain",
+          "keywords": [
+            "openai.com",
+            "huggingface.co",
+            "cohere.com",
+            "anthropic.com",
+            "chatglm.cn",
+            "hunyuan.tencent.com",
+            "baichuan-ai.com",
+            "mistral.ai",
+            "reka.ai",
+            "jina.ai",
+            "qwen.ai",
+            "deepseek.com"
+          ],
+          "weight": 15
+        },
+        {
+          "match": "title",
+          "keywords": [
+            "gpt-4",
+            "gpt4",
+            "claude 3",
+            "gemini",
+            "llama",
+            "sora",
+            "大模型",
+            "llm"
+          ],
+          "weight": 10
+        }
       ]
     },
     "🤖 AI/应用工具": {
       "rules": [
-        { "match": "domain", "keywords": ["perplexity.ai", "aider.chat", "replicate.com", "midjourney.com", "styleai.art", "ghibliai.net", "voo.works", "readpaper.com", "codium.ai", "metaso.cn"], "weight": 10 },
-        { "match": "title", "keywords": ["copilot", "langchain", "prompt", "stable diffusion", "aigc"], "weight": 8 }
+        {
+          "match": "domain",
+          "keywords": [
+            "perplexity.ai",
+            "aider.chat",
+            "replicate.com",
+            "midjourney.com",
+            "styleai.art",
+            "ghibliai.net",
+            "voo.works",
+            "readpaper.com",
+            "codium.ai",
+            "metaso.cn"
+          ],
+          "weight": 10
+        },
+        {
+          "match": "title",
+          "keywords": [
+            "copilot",
+            "langchain",
+            "prompt",
+            "stable diffusion",
+            "aigc"
+          ],
+          "weight": 8
+        }
       ]
-    },
-    "🤖 AI/论文资讯": {
-       "rules": [
-        { "match": "domain", "keywords": ["arxiv.org", "paperswithcode.com", "jalammar.github.io", "thenlp.space"], "weight": 10 }
-      ]
-    },
-    "💻 编程/代码仓库": {
-        "rules": [
-            { "match": "domain", "keywords": ["github.com", "gitlab.com", "gitcode.com", "sourceforge.net", "opensource.google", "opendev.org", "github.io"], "weight": 15 }
-        ]
     },
     "💻 编程/编程语言": {
       "rules": [
-        { "match": "domain", "keywords": ["python.org", "rust-lang.org", "go.dev", "java.com", "elixir.bootlin.com"], "weight": 10 },
-        { "match": "title", "keywords": ["python", "rust", "golang", " go ", "java", "c++", "openmp", "cuda"], "weight": 8, "must_not_contain": ["go out", "go shopping"] }
+        {
+          "match": "domain",
+          "keywords": [
+            "python.org",
+            "rust-lang.org",
+            "go.dev",
+            "java.com",
+            "elixir.bootlin.com"
+          ],
+          "weight": 10
+        },
+        {
+          "match": "title",
+          "keywords": [
+            "python",
+            "rust",
+            "golang",
+            " go ",
+            "java",
+            "c++",
+            "openmp",
+            "cuda"
+          ],
+          "weight": 8,
+          "must_not_contain": [
+            "go out",
+            "go shopping"
+          ]
+        },
+        {
+          "match": "domain",
+          "keywords": [
+            "github.com",
+            "gitlab.com",
+            "gitcode.com",
+            "sourceforge.net",
+            "opensource.google",
+            "opendev.org",
+            "github.io"
+          ],
+          "weight": 20
+        }
       ]
     },
     "💻 编程/Web开发": {
-       "rules": [
-        { "match": "domain", "keywords": ["vue-element-admin-site.panjiachen.com", "gioui.org", "webrtcforthecurious.com"], "weight": 8 },
-        { "match": "title", "keywords": ["react", "vue", "angular", "webpack", "nodejs", "css", "html", "frontend", "echarts", "eslint"], "weight": 5 }
+      "rules": [
+        {
+          "match": "domain",
+          "keywords": [
+            "vue-element-admin-site.panjiachen.com",
+            "gioui.org",
+            "webrtcforthecurious.com"
+          ],
+          "weight": 8
+        },
+        {
+          "match": "title",
+          "keywords": [
+            "react",
+            "vue",
+            "angular",
+            "webpack",
+            "nodejs",
+            "css",
+            "html",
+            "frontend",
+            "echarts",
+            "eslint"
+          ],
+          "weight": 5
+        }
       ]
     },
     "💻 编程/DevOps运维": {
       "rules": [
-        { "match": "domain", "keywords": ["docker.com", "kubernetes.io", "helm.sh", "aliyun.com", "huaweicloud.com", "vercel.com", "netlify.com", "cloudflare.com", "apptainer.org", "coder.com", "unraid.net"], "weight": 10 },
-        { "match": "title", "keywords": ["devops", "kubernetes", "docker", "ci/cd", "container", "jenkins", "prometheus", "grafana"], "weight": 7 }
+        {
+          "match": "domain",
+          "keywords": [
+            "docker.com",
+            "kubernetes.io",
+            "helm.sh",
+            "aliyun.com",
+            "huaweicloud.com",
+            "vercel.com",
+            "netlify.com",
+            "cloudflare.com",
+            "apptainer.org",
+            "coder.com",
+            "unraid.net"
+          ],
+          "weight": 10
+        },
+        {
+          "match": "title",
+          "keywords": [
+            "devops",
+            "kubernetes",
+            "docker",
+            "ci/cd",
+            "container",
+            "jenkins",
+            "prometheus",
+            "grafana"
+          ],
+          "weight": 7
+        }
       ]
     },
     "🧬 生物": {
-       "rules": [
-        { "match": "domain", "keywords": ["bioconda.github.io", "broadinstitute.org", "illumina.com", "ncbi.nlm.nih.gov", "stomics.tech", "cngb.org", "thermofisher.cn", "insvast.com", "harvard.edu", "biorxiv.org", "nature.com", "embopress.org", "rosalind.info", "biocontainers.pro", "singlecellcourse.org"], "weight": 20 },
-        { "match": "title", "keywords": ["bioinformatics", "biotool", "rna-seq", "genomics", "genome", "fastq", "sam", "vcf", "bam", "bioperl", "cell", "qiime2", "gatk", "基因组", "测序"], "weight": 15 }
-      ]
-    },
-    "📚 学习/书籍手册": {
       "rules": [
-        { "match": "domain", "keywords": ["greenteapress.com", "udlbook.github.io", "kancloud.cn", "ituring.com.cn", "norvig.com", "hello-algo.com", "gitbook.com"], "weight": 10 },
-        { "match": "title", "keywords": ["book", "手册", "指南", "tutorial"], "weight": 5 }
+        {
+          "match": "domain",
+          "keywords": [
+            "bioconda.github.io",
+            "broadinstitute.org",
+            "illumina.com",
+            "ncbi.nlm.nih.gov",
+            "stomics.tech",
+            "cngb.org",
+            "thermofisher.cn",
+            "insvast.com",
+            "harvard.edu",
+            "biorxiv.org",
+            "nature.com",
+            "embopress.org",
+            "rosalind.info",
+            "biocontainers.pro",
+            "singlecellcourse.org"
+          ],
+          "weight": 20
+        },
+        {
+          "match": "title",
+          "keywords": [
+            "bioinformatics",
+            "biotool",
+            "rna-seq",
+            "genomics",
+            "genome",
+            "fastq",
+            "sam",
+            "vcf",
+            "bam",
+            "bioperl",
+            "cell",
+            "qiime2",
+            "gatk",
+            "基因组",
+            "测序"
+          ],
+          "weight": 15
+        }
       ]
     },
     "📚 学习/技术文档": {
       "rules": [
-        { "match": "domain", "keywords": ["stackoverflow.com", "stackexchange.com", "medium.com", "dev.to", "juejin.cn", "segmentfault.com", "infoq.com", "ruanyifeng.com", "coolshell.cn", "zhile.io", "eryajf.net", "mtlynch.io", "blog.codingconfessions.com"], "weight": 10 },
-        { "match": "url_ends_with", "keywords": [".pdf"], "weight": 8 }
+        {
+          "match": "domain",
+          "keywords": [
+            "stackoverflow.com",
+            "stackexchange.com",
+            "medium.com",
+            "dev.to",
+            "juejin.cn",
+            "segmentfault.com",
+            "infoq.com",
+            "ruanyifeng.com",
+            "coolshell.cn",
+            "zhile.io",
+            "eryajf.net",
+            "mtlynch.io",
+            "blog.codingconfessions.com"
+          ],
+          "weight": 10
+        },
+        {
+          "match": "url_ends_with",
+          "keywords": [
+            ".pdf"
+          ],
+          "weight": 8
+        },
+        {
+          "match": "domain",
+          "keywords": [
+            "arxiv.org",
+            "paperswithcode.com",
+            "jalammar.github.io",
+            "thenlp.space"
+          ],
+          "weight": 15
+        },
+        {
+          "match": "domain",
+          "keywords": [
+            "greenteapress.com",
+            "udlbook.github.io",
+            "kancloud.cn",
+            "ituring.com.cn",
+            "norvig.com",
+            "hello-algo.com",
+            "gitbook.com"
+          ],
+          "weight": 15
+        },
+        {
+          "match": "title",
+          "keywords": [
+            "book",
+            "手册",
+            "指南",
+            "tutorial"
+          ],
+          "weight": 5
+        }
       ]
     },
     "📚 学习/课程讲座": {
       "rules": [
-        { "match": "domain", "keywords": ["slides.com", "speakerdeck.com", "ocw.mit.edu", "youtube.com", "bilibili.com"], "weight": 8, "match_all_keywords_in": {"title": ["lecture", "course", "talk", "conference", "教程", "课程"]} },
-        { "match": "title", "keywords": ["幻灯片", "演讲"], "weight": 5 }
+        {
+          "match": "domain",
+          "keywords": [
+            "slides.com",
+            "speakerdeck.com",
+            "ocw.mit.edu",
+            "youtube.com",
+            "bilibili.com"
+          ],
+          "weight": 8,
+          "match_all_keywords_in": {
+            "title": [
+              "lecture",
+              "course",
+              "talk",
+              "conference",
+              "教程",
+              "课程"
+            ]
+          }
+        },
+        {
+          "match": "title",
+          "keywords": [
+            "幻灯片",
+            "演讲"
+          ],
+          "weight": 5
+        }
       ]
     },
     "👥 社区": {
       "rules": [
-        { "match": "domain", "keywords": ["linux.do", "v2ex.com"], "weight": 20 },
-        { "match": "domain", "keywords": ["news.ycombinator.com", "reddit.com", "solidot.org", "hachyderm.io", "mastodon.social", "hupu.com", "chiphell.com"], "weight": 10 }
+        {
+          "match": "domain",
+          "keywords": [
+            "linux.do",
+            "v2ex.com"
+          ],
+          "weight": 20
+        },
+        {
+          "match": "domain",
+          "keywords": [
+            "news.ycombinator.com",
+            "reddit.com",
+            "solidot.org",
+            "hachyderm.io",
+            "mastodon.social",
+            "hupu.com",
+            "chiphell.com"
+          ],
+          "weight": 10
+        }
       ]
     },
     "📰 资讯": {
       "rules": [
-        { "match": "domain", "keywords": ["techcrunch.com", "theverge.com", "producthunt.com", "36kr.com", "arstechnica.com", "cnbeta.com.tw"], "weight": 8 },
-        { "match": "title", "keywords": ["news", "report", "周刊", "weekly", "日报"], "weight": 5 }
-      ]
-    },
-    "🛠️ 工具": {
-      "rules": [
-        { "match": "domain", "keywords": ["deepl.com", "regex101.com", "codepen.io", "tldraw.com", "jsoncrack.com", "mermaid.live", "excalidraw.com", "star-history.com", "portableapps.com", "raycast.com"], "weight": 10 }
+        {
+          "match": "domain",
+          "keywords": [
+            "techcrunch.com",
+            "theverge.com",
+            "producthunt.com",
+            "36kr.com",
+            "arstechnica.com",
+            "cnbeta.com.tw"
+          ],
+          "weight": 8
+        },
+        {
+          "match": "title",
+          "keywords": [
+            "news",
+            "report",
+            "周刊",
+            "weekly",
+            "日报"
+          ],
+          "weight": 5
+        }
       ]
     },
     "🎮 娱乐": {
-        "rules": [
-            { "match": "domain", "keywords": ["gying.si", "hifini.com", "music.163.com", "douban.com", "dribbble.com", "behance.net", "unsplash.com", "thefarside.com"], "weight": 8 },
-            { "match": "title", "keywords": ["电影", "音乐", "music", "播客", "wallpaper", "壁纸", "游戏", "漫画"], "weight": 5 }
-        ]
+      "rules": [
+        {
+          "match": "domain",
+          "keywords": [
+            "gying.si",
+            "hifini.com",
+            "music.163.com",
+            "douban.com",
+            "dribbble.com",
+            "behance.net",
+            "unsplash.com",
+            "thefarside.com"
+          ],
+          "weight": 8
+        },
+        {
+          "match": "title",
+          "keywords": [
+            "电影",
+            "音乐",
+            "music",
+            "播客",
+            "wallpaper",
+            "壁纸",
+            "游戏",
+            "漫画"
+          ],
+          "weight": 5
+        }
+      ]
     },
     "📖 稍读": {
       "rules": [
-        { "match": "title", "keywords": ["教程", "实践", "实战", "详解", "攻略", "指南"], "weight": 7 }
+        {
+          "match": "title",
+          "keywords": [
+            "教程",
+            "实践",
+            "实战",
+            "详解",
+            "攻略",
+            "指南"
+          ],
+          "weight": 7
+        }
       ]
     },
     "💼 求职": {
-        "rules": [
-            { "match": "domain", "keywords": ["linkedin.com", "zhipin.com", "lagou.com", "kanxue.com", "nowcoder.com"], "weight": 10 },
-            { "match": "title", "keywords": ["招聘", "求职", "career", "hiring", "job", "面试"], "weight": 5 }
-        ]
+      "rules": [
+        {
+          "match": "domain",
+          "keywords": [
+            "linkedin.com",
+            "zhipin.com",
+            "lagou.com",
+            "kanxue.com",
+            "nowcoder.com"
+          ],
+          "weight": 10
+        },
+        {
+          "match": "title",
+          "keywords": [
+            "招聘",
+            "求职",
+            "career",
+            "hiring",
+            "job",
+            "面试"
+          ],
+          "weight": 5
+        }
+      ]
     },
     "📂 其他/在线服务": {
-        "rules": [
-            { "match": "domain", "keywords": ["google.com", "baidu.com", "bing.com", "duckduckgo.com", "wolframalpha.com"], "weight": 5 },
-            { "match": "title", "keywords": ["search", "搜索", "在线", "online", "web"], "weight": 3 }
-        ]
+      "rules": [
+        {
+          "match": "domain",
+          "keywords": [
+            "google.com",
+            "baidu.com",
+            "bing.com",
+            "duckduckgo.com",
+            "wolframalpha.com"
+          ],
+          "weight": 5
+        },
+        {
+          "match": "title",
+          "keywords": [
+            "search",
+            "搜索",
+            "在线",
+            "online",
+            "web"
+          ],
+          "weight": 3
+        },
+        {
+          "match": "domain",
+          "keywords": [
+            "deepl.com",
+            "regex101.com",
+            "codepen.io",
+            "tldraw.com",
+            "jsoncrack.com",
+            "mermaid.live",
+            "excalidraw.com",
+            "star-history.com",
+            "portableapps.com",
+            "raycast.com"
+          ],
+          "weight": 15
+        }
+      ]
     },
     "📂 其他/文档资料": {
-        "rules": [
-            { "match": "title", "keywords": ["文档", "document", "资料", "materials", "reference", "参考"], "weight": 4 }
-        ]
+      "rules": [
+        {
+          "match": "title",
+          "keywords": [
+            "文档",
+            "document",
+            "资料",
+            "materials",
+            "reference",
+            "参考"
+          ],
+          "weight": 4
+        }
+      ]
     },
     "📂 其他/软件下载": {
-        "rules": [
-            { "match": "title", "keywords": ["下载", "download", "软件", "software", "app", "应用"], "weight": 4 }
-        ]
+      "rules": [
+        {
+          "match": "title",
+          "keywords": [
+            "下载",
+            "download",
+            "软件",
+            "software",
+            "app",
+            "应用"
+          ],
+          "weight": 4
+        }
+      ]
     }
   }
 }
