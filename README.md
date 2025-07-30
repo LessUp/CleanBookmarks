@@ -49,7 +49,7 @@ python main.py --interactive
 
 ```bash
 # 对单个文件进行分类
-python main.py -i bookmarks.html
+python main.py -i tests/input/*.html --workers 32
 
 # 使用通配符处理多个文件，并启用模型训练
 python main.py -i "tests/input/*.html" --train
@@ -59,7 +59,7 @@ python main.py -i "tests/input/*.html" --train
 
 ## 📖 深度使用与工作流
 
-为了充分发挥本工具的潜力，我们为您准备了一份详细的 **[工作流与深度使用指南](docs/WORKFLOW_GUIDE.md)**。
+为了充分发挥本工具的潜力，我们为您准备了一份详细的 **[工作流与深度使用指南](WORKFLOW_GUIDE.md)**。
 
 **强烈建议您阅读此指南**，它将帮助您：
 -   学习如何通过配置 `config.json` 来打好坚实的分类基础。
@@ -67,13 +67,13 @@ python main.py -i "tests/input/*.html" --train
 -   掌握“规则优先，模型辅助”的最佳实践。
 -   打造一个真正符合您个人习惯的、高效的智能书签系统。
 
-[➡️ **点击此处，开始您的深度使用之旅！**](docs/WORKFLOW_GUIDE.md)
+[➡️ **点击此处，开始您的深度使用之旅！**](WORKFLOW_GUIDE.md)
 
 ---
 
 ## 🤝 贡献
 
-我们欢迎任何形式的贡献！无论是提交Bug、建议新功能还是贡献代码，都对项目至关重要。请参考我们的[贡献指南](docs/WORKFLOW_GUIDE.md#如何贡献)。
+我们欢迎任何形式的贡献！无论是提交Bug、建议新功能还是贡献代码，都对项目至关重要。请参考我们的[贡献指南](WORKFLOW_GUIDE.md#如何贡献)。
 
 ## 📄 许可证
 

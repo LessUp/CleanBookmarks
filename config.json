@@ -44,7 +44,6 @@
     "📰 资讯",
     "💼 求职",
     "🎮 娱乐",
-    "📖 稍读",
     "📂 其他"
   ],
   "domain_grouping_rules": {
@@ -204,19 +203,34 @@
             "go out",
             "go shopping"
           ]
-        },
+        }
+      ]
+    },
+    "💻 编程/代码仓库": {
+      "rules": [
         {
           "match": "domain",
           "keywords": [
             "github.com",
             "gitlab.com",
-            "gitcode.com",
+            "gitee.com",
+            "bitbucket.org",
             "sourceforge.net",
             "opensource.google",
             "opendev.org",
             "github.io"
           ],
           "weight": 20
+        },
+        {
+          "match": "title",
+          "keywords": [
+            "代码仓库",
+            "repository",
+            "gitee",
+            "github"
+          ],
+          "weight": 10
         }
       ]
     },
@@ -387,9 +401,14 @@
             "book",
             "手册",
             "指南",
-            "tutorial"
+            "tutorial",
+            "教程",
+            "实践",
+            "实战",
+            "详解",
+            "攻略"
           ],
-          "weight": 5
+          "weight": 7
         }
       ]
     },
@@ -510,19 +529,31 @@
         }
       ]
     },
-    "📖 稍读": {
+    "🎮 娱乐/影音": {
       "rules": [
+        {
+          "match": "domain",
+          "keywords": [
+            "youtube.com",
+            "bilibili.com",
+            "v.qq.com",
+            "youku.com",
+            "iqiyi.com",
+            "moontv.click"
+          ],
+          "weight": 8
+        },
         {
           "match": "title",
           "keywords": [
-            "教程",
-            "实践",
-            "实战",
-            "详解",
-            "攻略",
-            "指南"
+            "电影",
+            "电视剧",
+            "MV",
+            "预告",
+            "周深",
+            "MoonTV"
           ],
-          "weight": 7
+          "weight": 6
         }
       ]
     },
