@@ -82,16 +82,38 @@ def main():
             # 批处理模式 - 展开通配符
             input_files = []
             for pattern in args.input:
+                # 检查是否为带引号的通配符路径 (Windows)
+                if ('*' in pattern or '?' in pattern) and (pattern.startswith('"') and pattern.endswith('"')):
+                    pattern = pattern.strip('"')
+
+                # 再次检查通配符
                 if '*' in pattern or '?' in pattern:
-                    # 展开通配符
-                    expanded = glob.glob(pattern)
-                    if expanded:
-                        input_files.extend(expanded)
+                    # 手动处理路径，提高兼容性
+                    p = Path(pattern)
+                    # 如果模式是 `*` 或 `*.ext`，则 parent 是目录
+                    # 如果模式是 `dir/*`，则 parent 是 dir
+                    directory = p.parent
+                    glob_pattern = p.name
+                    
+                    if directory.is_dir():
+                        expanded = [str(f) for f in directory.glob(glob_pattern)]
+                        if expanded:
+                            input_files.extend(expanded)
+                        else:
+                            logger.warning(f"在目录 '{directory}' 中没有找到匹配 '{glob_pattern}' 的文件")
                     else:
-                        logger.warning(f"没有找到匹配模式的文件: {pattern}")
+                        # 如果目录不存在或不是目录，尝试原始的glob（作为后备）
+                        expanded_fallback = glob.glob(pattern)
+                        if expanded_fallback:
+                            input_files.extend(expanded_fallback)
+                        else:
+                             logger.warning(f"没有找到匹配模式的文件: {pattern}")
                 else:
                     # 直接文件路径
-                    input_files.append(pattern)
+                    if Path(pattern).is_file():
+                        input_files.append(pattern)
+                    else:
+                        logger.warning(f"文件不存在或不是一个有效文件: {pattern}")
             
             if not input_files:
                 logger.error("没有找到有效的输入文件")
