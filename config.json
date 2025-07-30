@@ -1,5 +1,5 @@
 {
-  "show_confidence_indicator": true,
+  "show_confidence_indicator": false,
   "ai_settings": {
     "confidence_threshold": 0.7,
     "use_semantic_analysis": true,

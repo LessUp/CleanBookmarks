@@ -1529,7 +1529,12 @@ class DataExporter:
         
         # 添加置信度信息到标题
         confidence_indicator = self._get_confidence_indicator(confidence)
-        display_title = f"{confidence_indicator} {title}" if confidence_indicator else title
+        
+        # 修复：在添加新的指示符之前，先移除旧的，避免累加
+        # 使用正则表达式匹配开头的一个或多个Emoji指示符和随后的空格
+        clean_title = re.sub(r'^[🟢🟡🟠🔴]\s*', '', title).strip()
+        
+        display_title = f"{confidence_indicator} {clean_title}" if confidence_indicator else clean_title
         
         return f'{indent}<DT><A {" ".join(attributes)}>{display_title}</A>'
     
