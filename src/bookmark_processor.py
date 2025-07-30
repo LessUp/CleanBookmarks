@@ -153,16 +153,16 @@ class BookmarkProcessor:
         # 组织分类结果
         organized_bookmarks = self._organize_bookmarks(classified_bookmarks)
         
+        # 更新统计
+        self.stats['processing_time'] = time.time() - start_time
+        self.stats['processed_bookmarks'] = len(classified_bookmarks)
+        
         # 导出结果
         self._export_results(organized_bookmarks, output_dir)
         
         # 训练模型（如果启用）
         if train_models and self.use_ml:
             self._train_models(classified_bookmarks)
-        
-        # 更新统计
-        self.stats['processing_time'] = time.time() - start_time
-        self.stats['processed_bookmarks'] = len(classified_bookmarks)
         
         self.logger.info(f"处理完成: {self.stats['processed_bookmarks']} 个书签已分类")
         
