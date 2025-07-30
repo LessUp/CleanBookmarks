@@ -104,7 +104,7 @@ python main.py -i tests/input/*.html
 python main.py -i tests/input/*.html --train
 
 # 自定义配置
-python main.py -i bookmarks.html -o results --workers 16 --threshold 0.8
+python main.py -i tests/input/*.html -o results --workers 16 --threshold 0.8
 ```
 
 ## 📖 使用指南
