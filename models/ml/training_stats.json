@@ -1,0 +1,14 @@
+{
+  "total_samples": 637,
+  "categories_count": 23,
+  "accuracy_scores": {
+    "rf": 0.640625,
+    "svm": 0.6171875,
+    "lr": 0.7578125,
+    "nb": 0.7890625,
+    "gb": 0.6796875,
+    "sgd": 0.796875,
+    "ensemble": 0.78125
+  },
+  "last_training_time": "2025-07-30T10:34:26.904533"
+}
