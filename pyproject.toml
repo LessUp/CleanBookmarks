@@ -1,0 +1,51 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "cleanbook"
+version = "0.1.0"
+description = "智能书签清理与分类：规则+ML+LLM（可选）"
+authors = [{ name = "LessUp" }]
+readme = "README.md"
+requires-python = ">=3.8"
+keywords = ["bookmarks", "classification", "clean", "ai", "llm"]
+license = { text = "MIT" }
+
+# 运行依赖（与 requirements.txt 对齐，尽量精简）
+dependencies = [
+  "beautifulsoup4",
+  "lxml",
+  "numpy",
+  "scikit-learn",
+  "jieba",
+  "langdetect",
+  "pandas",
+  "requests",
+  "tqdm",
+  "click",
+  "psutil",
+  "joblib",
+  "pyyaml",
+  "jsonschema",
+  "rich",
+  "chardet",
+  "urllib3"
+]
+
+[project.urls]
+Homepage = "https://github.com/yourname/CleanBookmarks"
+
+[project.scripts]
+# 命令入口（推荐 pipx 安装后直接使用）
+cleanbook = "src.cleanbook.cli:main"
+cleanbook-wizard = "src.enhanced_cli:main"
+
+[tool.setuptools]
+# 包含包和独立模块
+py-modules = ["main"]
+packages = ["src", "src.cleanbook"]
+
+[tool.setuptools.package-data]
+# 打包模型与配置（如需）
+"src" = ["**/*.pkl", "**/*.json"]

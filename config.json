@@ -53,7 +53,6 @@
     "📚 学习",
     "👥 社区",
     "📰 资讯",
-    "💼 求职",
     "🎮 娱乐",
     "📂 其他"
   ],
@@ -565,33 +564,6 @@
             "MoonTV"
           ],
           "weight": 6
-        }
-      ]
-    },
-    "💼 求职": {
-      "rules": [
-        {
-          "match": "domain",
-          "keywords": [
-            "linkedin.com",
-            "zhipin.com",
-            "lagou.com",
-            "kanxue.com",
-            "nowcoder.com"
-          ],
-          "weight": 10
-        },
-        {
-          "match": "title",
-          "keywords": [
-            "招聘",
-            "求职",
-            "career",
-            "hiring",
-            "job",
-            "面试"
-          ],
-          "weight": 5
         }
       ]
     },
