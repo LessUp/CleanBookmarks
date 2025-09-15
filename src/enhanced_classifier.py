@@ -29,6 +29,15 @@ try:
 except ImportError:
     ML_AVAILABLE = False
 
+# 导入 LLM 分类器（可选）
+try:
+    from .llm_classifier import LLMClassifier
+except Exception:
+    try:
+        from llm_classifier import LLMClassifier
+    except Exception:
+        LLMClassifier = None
+
 @dataclass
 class EnhancedBookmarkFeatures:
     """增强的书签特征提取"""
@@ -85,7 +94,9 @@ class EnhancedClassifier:
             'cache_hits': 0,
             'avg_processing_time': 0.0,
             'category_distribution': Counter(),
-            'confidence_distribution': defaultdict(int)
+            'confidence_distribution': defaultdict(int),
+            'llm_calls': 0,
+            'llm_cache_hits': 0
         }
         
         # 学习系统
@@ -97,6 +108,13 @@ class EnhancedClassifier:
         self.ml_classifier = None
         if ML_AVAILABLE:
             self.ml_classifier = MLClassifierWrapper()
+        # LLM 分类器（按配置）
+        self.llm_classifier = None
+        if LLMClassifier is not None:
+            try:
+                self.llm_classifier = LLMClassifier(self.config_path)
+            except Exception:
+                self.llm_classifier = None
         
         # 预编译正则表达式
         self._compile_patterns()
@@ -352,6 +370,26 @@ class EnhancedClassifier:
                     scores[ml_category] += ml_score
                     reasoning.append(f"机器学习: {ml_category} (+{ml_score:.2f})")
                     features_used.append("machine_learning")
+
+            # 7. LLM 分类（可选）
+            if self.llm_classifier and self.llm_classifier.enabled():
+                llm_result = self.llm_classifier.classify(
+                    url,
+                    title,
+                    context={
+                        'domain': features.domain,
+                        'content_type': features.content_type,
+                        'language': features.language
+                    }
+                )
+                if llm_result:
+                    self.stats['llm_calls'] += 1
+                    llm_cat = llm_result.get('category', '未分类')
+                    llm_conf = float(llm_result.get('confidence', 0.0))
+                    llm_score = llm_conf * 12  # 略高于 ML 的基准分，凸显 LLM 作用
+                    scores[llm_cat] += llm_score
+                    reasoning.extend(llm_result.get('reasoning', []))
+                    features_used.append('llm')
             
             # 归一化和选择最佳分类
             if not scores:

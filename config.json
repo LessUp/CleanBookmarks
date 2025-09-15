@@ -8,6 +8,17 @@
     "max_workers": 4,
     "enable_learning": true
   },
+  "llm": {
+    "enable": false,
+    "provider": "openai",
+    "base_url": "https://api.openai.com",
+    "model": "gpt-4o-mini",
+    "api_key_env": "OPENAI_API_KEY",
+    "temperature": 0.0,
+    "top_p": 1.0,
+    "timeout_seconds": 25,
+    "max_retries": 1
+  },
   "title_cleaning_rules": {
     "prefixes": [
       "登录 |",

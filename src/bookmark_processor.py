@@ -8,6 +8,9 @@ import json
 import logging
 import os
 import time
+import re
+from .emoji_cleaner import clean_title as clean_emoji_title
+
 from typing import List, Dict, Optional, Tuple
 from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -138,13 +141,9 @@ class BookmarkProcessor:
         fast_duplicates_removed = len(all_bookmarks) - len(fast_unique)
         self.logger.info(f"快速去重移除了 {fast_duplicates_removed} 个重复书签")
         
-        # 对剩余书签进行高级去重
-        if len(fast_unique) > 1000:  # 只对大量书签进行高级去重
-            unique_bookmarks, duplicates = self.deduplicator.remove_duplicates(fast_unique)
-            self.stats['duplicates_removed'] = fast_duplicates_removed + len(duplicates)
-        else:
-            unique_bookmarks = fast_unique
-            self.stats['duplicates_removed'] = fast_duplicates_removed
+        # 对剩余书签执行高级去重（始终执行，提升跨浏览器合并的去重质量）
+        unique_bookmarks, duplicates = self.deduplicator.remove_duplicates(fast_unique)
+        self.stats['duplicates_removed'] = fast_duplicates_removed + len(duplicates)
         
         # 并行分类处理
         self.logger.info(f"开始分类 {len(unique_bookmarks)} 个书签...")
@@ -187,8 +186,10 @@ class BookmarkProcessor:
             
             for link in links:
                 url = link.get('href', '').strip()
-                title = (link.string or link.get_text() or '').strip()
-                
+                title_raw = (link.string or link.get_text() or '').strip()
+                # 统一使用预处理模块清理标题前缀emoji，防止多次导出叠加
+                title = clean_emoji_title(title_raw)
+
                 if url and title and self._is_valid_url(url):
                     bookmarks.append({
                         'url': url,

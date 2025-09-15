@@ -26,6 +26,12 @@ try:
 except ImportError:
     MLClassifierWrapper = None
 
+# LLM 分类器
+try:
+    from .llm_classifier import LLMClassifier
+except ImportError:
+    LLMClassifier = None
+
 from .rule_engine import RuleEngine
 
 # 导入占位符模块
@@ -88,6 +94,7 @@ class AIBookmarkClassifier:
         self._user_profiler = None
         self._performance_monitor = None
         self._ml_classifier = None
+        self._llm_classifier = None
         
         # 缓存系统 - 优化缓存大小和策略
         self.feature_cache = {}
@@ -103,7 +110,8 @@ class AIBookmarkClassifier:
             'user_profiler': 0,
             'fallback': 0, # 未分类
             'cache_hits': 0,
-            'average_confidence': 0.0
+            'average_confidence': 0.0,
+            'llm': 0
         }
     
     @property
@@ -151,6 +159,16 @@ class AIBookmarkClassifier:
             except Exception as e:
                 self.logger.warning(f"机器学习组件初始化失败: {e}")
         return self._ml_classifier
+    
+    @property
+    def llm_classifier(self):
+        """延迟加载LLM分类器（按配置启用）"""
+        if self._llm_classifier is None and LLMClassifier is not None:
+            try:
+                self._llm_classifier = LLMClassifier(self.config_path)
+            except Exception as e:
+                self.logger.warning(f"LLM 分类器初始化失败: {e}")
+        return self._llm_classifier
     
     def _load_config(self) -> Dict:
         """加载配置文件"""
@@ -282,6 +300,20 @@ class AIBookmarkClassifier:
             if user_result:
                 results.append(user_result)
         
+        # 5. LLM 分类（可选，需配置启用且设置 API Key）
+        if self.llm_classifier and self.llm_classifier.enabled():
+            llm_result = self.llm_classifier.classify(
+                url,
+                title,
+                context={
+                    'domain': features.domain,
+                    'content_type': features.content_type,
+                    'language': features.language
+                }
+            )
+            if llm_result:
+                results.append(llm_result)
+        
         # 融合多个分类结果
         final_result = self._ensemble_classification(results, features)
         
@@ -295,6 +327,8 @@ class AIBookmarkClassifier:
             self.stats['semantic_analyzer'] += 1
         if 'user_profiler' in final_method:
             self.stats['user_profiler'] += 1
+        if 'llm' in final_method:
+            self.stats['llm'] += 1
         if final_method == 'fallback':
             self.stats['fallback'] += 1
         
@@ -335,10 +369,11 @@ class AIBookmarkClassifier:
         
         # 权重配置
         method_weights = {
-            'rule_engine': 0.4,
-            'machine_learning': 0.3, # 修正: 使用 'machine_learning'
-            'semantic_analyzer': 0.2,
-            'user_profiler': 0.1
+            'rule_engine': 0.35,
+            'machine_learning': 0.25, # 修正: 使用 'machine_learning'
+            'semantic_analyzer': 0.15,
+            'user_profiler': 0.1,
+            'llm': 0.5
         }
         
         for result in results:
@@ -480,7 +515,7 @@ class AIBookmarkClassifier:
         """获取分类统计"""
         total_predictions = self.stats['rule_engine'] + self.stats['ml_classifier'] + \
                             self.stats['semantic_analyzer'] + self.stats['user_profiler'] + \
-                            self.stats['fallback']
+                            self.stats['llm'] + self.stats['fallback']
         
         return {
             'total_classified': self.stats['total_classified'],
@@ -492,6 +527,7 @@ class AIBookmarkClassifier:
                 'ml_classifier': self.stats['ml_classifier'],
                 'semantic_analyzer': self.stats['semantic_analyzer'],
                 'user_profiler': self.stats['user_profiler'],
+                'llm': self.stats['llm'],
                 'unclassified (fallback)': self.stats['fallback'],
                 'total': total_predictions
             },

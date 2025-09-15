@@ -25,6 +25,8 @@ from datetime import datetime
 import hashlib
 from bs4 import BeautifulSoup
 import html
+import re
+from emoji_cleaner import clean_title as clean_emoji_title
 
 # 添加项目路径
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -200,6 +202,8 @@ class EnhancedBookmarkProcessor:
         
         # 去除HTML实体
         title = html.unescape(title)
+        # 先移除前缀 emoji 指示符，避免叠加影响（统一模块）
+        title = clean_emoji_title(title)
         
         # 应用清理规则
         config = self.classifier.config
@@ -340,9 +344,13 @@ class EnhancedBookmarkProcessor:
         for bookmark in processed_bookmarks:
             category = bookmark['category']
             
-            # 处理嵌套分类
+            # 处理嵌套分类（限制最多两级）
             if '/' in category:
-                parts = category.split('/')
+                raw_parts = [p.strip() for p in category.split('/') if p.strip()]
+                if len(raw_parts) > 2:
+                    parts = [raw_parts[0], '/'.join(raw_parts[1:])]
+                else:
+                    parts = raw_parts
                 current = organized
                 
                 for i, part in enumerate(parts):
@@ -400,23 +408,28 @@ class EnhancedBookmarkProcessor:
             
             # 书签项目
             if '_items' in data:
+                show_conf = self.classifier.config.get("show_confidence_indicator", False)
                 for item in data['_items']:
                     confidence = item['confidence']
+                    # 清理已有 emoji 前缀（统一模块）
+                    clean_title = clean_emoji_title(item['title'])
                     
                     # 置信度指示器
-                    if confidence >= 0.9:
-                        indicator = "🔥"
-                    elif confidence >= 0.7:
-                        indicator = "📌"
-                    elif confidence >= 0.5:
-                        indicator = "⭐"
+                    if show_conf:
+                        if confidence >= 0.9:
+                            indicator = "🔥"
+                        elif confidence >= 0.7:
+                            indicator = "📌"
+                        elif confidence >= 0.5:
+                            indicator = "⭐"
+                        else:
+                            indicator = "❓"
+                        title_final = f"{indicator} {html.escape(clean_title)}"
                     else:
-                        indicator = "❓"
+                        title_final = html.escape(clean_title)
                     
-                    title_with_indicator = f"{indicator} {html.escape(item['title'])}"
                     url_escaped = html.escape(item['url'], quote=True)
-                    
-                    lines.append(f"{ind}    <DT><A HREF=\"{url_escaped}\" ADD_DATE=\"{timestamp}\">{title_with_indicator}</A>")
+                    lines.append(f"{ind}    <DT><A HREF=\"{url_escaped}\" ADD_DATE=\"{timestamp}\">{title_final}</A>")
             
             lines.append(f"{ind}</DL><p>")
         
@@ -475,20 +488,27 @@ class EnhancedBookmarkProcessor:
             
             # 书签项目
             if '_items' in data:
+                show_conf = self.classifier.config.get("show_confidence_indicator", False)
                 for item in data['_items']:
                     confidence = item['confidence']
+                    # 清理标题中的 emoji 前缀（统一模块）
+                    clean_title = clean_emoji_title(item['title'])
                     
-                    # 置信度指示器
-                    if confidence >= 0.9:
-                        indicator = "🔥"
-                    elif confidence >= 0.7:
-                        indicator = "📌"
-                    elif confidence >= 0.5:
-                        indicator = "⭐"
+                    # 置信度指示器（受配置开关控制）
+                    if show_conf:
+                        if confidence >= 0.9:
+                            indicator = "🔥"
+                        elif confidence >= 0.7:
+                            indicator = "📌"
+                        elif confidence >= 0.5:
+                            indicator = "⭐"
+                        else:
+                            indicator = "❓"
+                        prefix_emoji = f"{indicator} "
                     else:
-                        indicator = "❓"
+                        prefix_emoji = ""
                     
-                    lines.append(f"- {indicator} [{item['title']}]({item['url']}) *({confidence:.3f})*")
+                    lines.append(f"- {prefix_emoji}[{clean_title}]({item['url']}) *({confidence:.3f})*")
                 
                 lines.append("")
         

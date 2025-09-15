@@ -1432,6 +1432,7 @@ from typing import Dict, List, Optional, Any
 from datetime import datetime
 import os
 import re
+from .emoji_cleaner import clean_title as clean_emoji_title
 
 class DataExporter:
     """数据导出器 - 支持多种格式的书签导出"""
@@ -1530,9 +1531,8 @@ class DataExporter:
         # 添加置信度信息到标题
         confidence_indicator = self._get_confidence_indicator(confidence)
         
-        # 修复：在添加新的指示符之前，先移除旧的，避免累加
-        # 使用正则表达式匹配开头的一个或多个Emoji指示符和随后的空格
-        clean_title = re.sub(r'^[🟢🟡🟠🔴]\s*', '', title).strip()
+        # 使用统一的清理工具，移除开头指示符，避免累加
+        clean_title = clean_emoji_title(title)
         
         display_title = f"{confidence_indicator} {clean_title}" if confidence_indicator else clean_title
         
@@ -1675,8 +1675,10 @@ class DataExporter:
         # 置信度指示
         confidence_indicator = self._get_confidence_indicator(confidence)
         confidence_text = f" ({confidence:.2f})" if confidence > 0 else ""
-        
-        return f"- {confidence_indicator} [{title}]({url}){confidence_text}"
+        # 清理冒头重复 emoji 前缀（统一工具）
+        clean_title = clean_emoji_title(title)
+        prefix = f"{confidence_indicator} " if confidence_indicator else ""
+        return f"- {prefix}[{clean_title}]({url}){confidence_text}"
     
     def _slugify(self, text: str) -> str:
         """将文本转换为适合作Markdown锦点的格式"""
