@@ -73,3 +73,69 @@
 - `resource_type` 能被规则引擎分面或内容类型推断命中
 - 导出结果不包含空的分类/子分类目录
 - 未配置 LLM 时流程稳定、可回退
+
+---
+
+## 教学导读
+
+面向第一次接触本项目的读者，本节给出最小心智模型：
+
+- 输入是浏览器导出的 HTML 书签文件，输出是结构化的多格式结果（HTML/Markdown/JSON）。
+- 分类遵循“受控词表 + 分面分类 + 权威控制”，并优先规则，模型辅助，可选 LLM 兜底。
+- 配置驱动，默认离线可用；不懂代码也能通过 `config.json` 与 `taxonomy/*.yaml` 完成大多数定制。
+
+建议先阅读 `docs/quickstart_zh.md` 完成一次最小运行，再回到本文档理解设计细节。
+
+## 术语速览（KISS）
+
+- `subject`：主题（主维度）。例如：`AI`、`Python`、`Productivity`。
+- `resource_type`：资源类型（分面）。例如：`documentation`、`code_repository`、`video`。
+- 受控词表（Controlled Vocabulary）：统一首选词与同义变体，避免“同义项四散”。
+- 分面分类（Faceted Classification）：按多维属性组织（本项目固定为 `subject -> resource_type`）。
+- 权威控制（Authority Control）：词表与映射集中在 YAML 中版本化维护，便于审阅与追踪。
+
+## 5 分钟上手（从 0 到 1）
+
+1. 准备输入：导出浏览器书签 HTML，放到 `examples/` 或自定义路径。
+2. 最小执行：
+   ```bash
+   cleanbook -i examples/demo_bookmarks.html -o output
+   ```
+3. 查看产出：在 `output/` 下找到 HTML/Markdown/JSON；先看 Markdown 以便人工核验。
+4. 若分类不理想：
+   - 优先改 `config.json` 的规则与权重。
+   - 如需引入 AI：根据 `docs/design/ml_design_zh.md` 训练并集成模型（可选）。
+   - 如需启用 LLM：在 `config.json` 打开 `llm.enable` 并设置 Key（可选，支持自动降级）。
+
+## 常见问题（FAQ）
+
+- 如何避免“目录过深/过细”？
+  - 保持两级：`subject -> resource_type`。必要时将细项折叠为标签或注释，而非新增层级。
+
+- 标题里的 emoji 重复？
+  - 系统在读入/标准化/导出三处均做清理；若仍有问题，请确认使用最新版并检查导出配置。
+
+- 没有网络/不想用云服务？
+  - 默认离线可用：规则/词表/ML 训练均可在本地完成；LLM 是可选项，失败会自动降级。
+
+- 如何持续变好？
+  - 以“配置优先”方式演进：
+    - 新增规则与词表映射，先改 `config.json` 与 `taxonomy/*.yaml`。
+    - 将高置信度样本沉淀为训练集，定期训练轻量 ML 模型。
+
+## 设计取舍（Principles）
+
+- 简洁优先（KISS）：接口、数据、流程尽量少而稳定；复杂性留给配置与可选组件。
+- 默认可用：无 LLM、无网络、无额外服务也能跑完整流程。
+- 可插拔：规则/ML/LLM/导出器均为可选模块，互不强绑定。
+- 可追溯：受控词表与配置均在版本库中，配合导出统计与日志，方便回溯与教学。
+
+## 教学建议（用于工作坊/课堂）
+
+- 90 分钟课堂结构：
+  - 15 分钟：阅读 `quickstart_zh.md` 并完成最小运行。
+  - 30 分钟：基于 `config.json` 新增 3 条规则并演示效果。
+  - 30 分钟：构造 30 条标注样本，训练基础 ML 模型并接入。
+  - 15 分钟：讨论“受控词表与分面”的优势与边界。
+
+---
