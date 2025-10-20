@@ -41,6 +41,10 @@
       "(7条消息)": ""
     }
   },
+  "taxonomy": {
+    "subjects_file": "taxonomy/subjects.yaml",
+    "resource_types_file": "taxonomy/resource_types.yaml"
+  },
   "processing_order": [
     "priority_rules",
     "category_rules"

@@ -1485,28 +1485,32 @@ class DataExporter:
         html_parts.append('    <DT><H3 PERSONAL_TOOLBAR_FOLDER="true">收藏夹栏</H3>')
         html_parts.append('    <DL><p>')
 
-        # 直接在收藏夹栏内生成分类文件夹
+        # 直接在收藏夹栏内生成分类文件夹（跳过空分类/子分类）
         for category, category_data in organized_bookmarks.items():
+            items = category_data.get('_items', [])
+            subcategories = category_data.get('_subcategories', {})
+            has_sub_items = any(len(sc.get('_items', [])) > 0 for sc in subcategories.values())
+            if not items and not has_sub_items:
+                continue
+
             html_parts.append(f'        <DT><H3>{self._escape_html(category)}</H3>')
             html_parts.append('        <DL><p>')
-            
+
             # 直接在分类下的书签
-            items = category_data.get('_items', [])
             for item in items:
                 html_parts.append(self._format_bookmark_html(item, indent='            '))
-            
+
             # 子分类
-            subcategories = category_data.get('_subcategories', {})
             for subcat_name, subcat_data in subcategories.items():
+                sub_items = subcat_data.get('_items', [])
+                if not sub_items:
+                    continue
                 html_parts.append(f'            <DT><H3>{self._escape_html(subcat_name)}</H3>')
                 html_parts.append('            <DL><p>')
-                
-                sub_items = subcat_data.get('_items', [])
                 for item in sub_items:
                     html_parts.append(self._format_bookmark_html(item, indent='                '))
-                
                 html_parts.append('            </DL><p>')
-            
+
             html_parts.append('        </DL><p>')
         
         # 闭合所有标签
@@ -1563,18 +1567,39 @@ class DataExporter:
                     .replace('"', '&quot;')
                     .replace("'", '&#x27;'))
     
+    def _category_has_items(self, category_data: Dict) -> bool:
+        """判断分类是否包含任何书签项（自身或子分类）。"""
+        items = category_data.get('_items', [])
+        if items:
+            return True
+        subcategories = category_data.get('_subcategories', {})
+        return any(len(sc.get('_items', [])) > 0 for sc in subcategories.values())
+
+    def _prune_empty(self, organized_bookmarks: Dict) -> Dict:
+        """移除空的分类与空的子分类。"""
+        pruned = {}
+        for category, category_data in organized_bookmarks.items():
+            items = category_data.get('_items', [])
+            subcategories = category_data.get('_subcategories', {})
+            # 过滤仅保留有条目的子分类
+            filtered_sub = {name: data for name, data in subcategories.items() if len(data.get('_items', [])) > 0}
+            if items or filtered_sub:
+                pruned[category] = {'_items': items, '_subcategories': filtered_sub}
+        return pruned
+    
     def export_json(self, organized_bookmarks: Dict, output_file: str, stats: Optional[Dict] = None):
         """导出JSON格式 - 详细数据"""
+        filtered = self._prune_empty(organized_bookmarks)
         data = {
             'metadata': {
                 'export_time': self.export_timestamp,
                 'format_version': '2.0',
                 'generator': 'AI智能书签分类系统',
-                'total_categories': len(organized_bookmarks),
-                'total_bookmarks': self._count_total_bookmarks(organized_bookmarks)
+                'total_categories': len(filtered),
+                'total_bookmarks': self._count_total_bookmarks(filtered)
             },
             'statistics': stats or {},
-            'bookmarks': organized_bookmarks
+            'bookmarks': filtered
         }
         
         with open(output_file, 'w', encoding='utf-8') as f:
@@ -1630,15 +1655,18 @@ class DataExporter:
             
             lines.append('')
         
-        # 目录
+        # 目录（仅非空分类）
         lines.append('## 📚 目录')
         lines.append('')
-        for i, category in enumerate(organized_bookmarks.keys(), 1):
+        non_empty_categories = [c for c, d in organized_bookmarks.items() if self._category_has_items(d)]
+        for i, category in enumerate(non_empty_categories, 1):
             lines.append(f"{i}. [{category}](#{self._slugify(category)})")
         lines.append('')
         
-        # 分类内容
+        # 分类内容（仅非空分类/子分类）
         for category, category_data in organized_bookmarks.items():
+            if not self._category_has_items(category_data):
+                continue
             lines.append(f'## {category}')
             lines.append('')
             
@@ -1652,10 +1680,11 @@ class DataExporter:
             # 子分类
             subcategories = category_data.get('_subcategories', {})
             for subcat_name, subcat_data in subcategories.items():
+                sub_items = subcat_data.get('_items', [])
+                if not sub_items:
+                    continue
                 lines.append(f'### {subcat_name}')
                 lines.append('')
-                
-                sub_items = subcat_data.get('_items', [])
                 for item in sub_items:
                     lines.append(self._format_bookmark_markdown(item))
                 lines.append('')
@@ -1756,6 +1785,11 @@ class DataExporter:
         bookmarks_elem = ET.SubElement(root, 'categories')
         
         for category, category_data in organized_bookmarks.items():
+            items = category_data.get('_items', [])
+            subcategories = category_data.get('_subcategories', {})
+            has_sub_items = any(len(sc.get('_items', [])) > 0 for sc in subcategories.values())
+            if not items and not has_sub_items:
+                continue
             category_elem = ET.SubElement(bookmarks_elem, 'category')
             category_elem.set('name', category)
             
@@ -1768,17 +1802,17 @@ class DataExporter:
             
             # 子分类
             subcategories = category_data.get('_subcategories', {})
-            if subcategories:
+            # 仅当存在有条目的子分类时输出
+            filtered_sub = {n: d for n, d in subcategories.items() if len(d.get('_items', [])) > 0}
+            if filtered_sub:
                 subcats_elem = ET.SubElement(category_elem, 'subcategories')
-                for subcat_name, subcat_data in subcategories.items():
+                for subcat_name, subcat_data in filtered_sub.items():
                     subcat_elem = ET.SubElement(subcats_elem, 'subcategory')
                     subcat_elem.set('name', subcat_name)
-                    
                     sub_items = subcat_data.get('_items', [])
-                    if sub_items:
-                        sub_items_elem = ET.SubElement(subcat_elem, 'items')
-                        for item in sub_items:
-                            self._add_bookmark_xml(sub_items_elem, item)
+                    sub_items_elem = ET.SubElement(subcat_elem, 'items')
+                    for item in sub_items:
+                        self._add_bookmark_xml(sub_items_elem, item)
         
         # 格式化并写入文件
         xml_str = minidom.parseString(ET.tostring(root)).toprettyxml(indent="  ")
@@ -1818,6 +1852,11 @@ class DataExporter:
         body = ET.SubElement(root, 'body')
         
         for category, category_data in organized_bookmarks.items():
+            items = category_data.get('_items', [])
+            subcategories = category_data.get('_subcategories', {})
+            has_sub_items = any(len(sc.get('_items', [])) > 0 for sc in subcategories.values())
+            if not items and not has_sub_items:
+                continue
             category_outline = ET.SubElement(body, 'outline')
             category_outline.set('text', category)
             category_outline.set('title', category)
@@ -1834,11 +1873,12 @@ class DataExporter:
             # 子分类
             subcategories = category_data.get('_subcategories', {})
             for subcat_name, subcat_data in subcategories.items():
+                sub_items = subcat_data.get('_items', [])
+                if not sub_items:
+                    continue
                 subcat_outline = ET.SubElement(category_outline, 'outline')
                 subcat_outline.set('text', subcat_name)
                 subcat_outline.set('title', subcat_name)
-                
-                sub_items = subcat_data.get('_items', [])
                 for item in sub_items:
                     item_outline = ET.SubElement(subcat_outline, 'outline')
                     item_outline.set('text', item.get('title', ''))

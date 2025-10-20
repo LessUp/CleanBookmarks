@@ -121,12 +121,45 @@ class RuleEngine:
             self.stats['total_matches'] += 1
             self.stats['category_predictions'][best_category] += 1
             
+            # 分面提示：推断资源类型
+            resource_type_hint = None
+            try:
+                ct_map = {
+                    'video': 'video',
+                    'code_repository': 'code_repository',
+                    'documentation': 'documentation',
+                    'academic_paper': 'paper',
+                    'news': 'news',
+                    'online_tool': 'tool',
+                    'webpage': 'webpage'
+                }
+                if hasattr(features, 'content_type'):
+                    resource_type_hint = ct_map.get(features.content_type)
+
+                domain = getattr(features, 'domain', '').lower()
+                url_lower = getattr(features, 'url', '').lower()
+                title_lower = getattr(features, 'title', '').lower()
+
+                if any(d in domain for d in ['github.com', 'gitlab.com', 'bitbucket.org', 'gitee.com', 'sourceforge.net', 'github.io']):
+                    resource_type_hint = 'code_repository'
+                elif any(p in url_lower for p in ['docs.', '/docs', 'documentation', 'wiki']):
+                    resource_type_hint = resource_type_hint or 'documentation'
+                elif any(d in domain for d in ['youtube.com', 'bilibili.com', 'vimeo.com']):
+                    resource_type_hint = 'video'
+                elif any(k in title_lower for k in ['news', '新闻', 'weekly']):
+                    resource_type_hint = resource_type_hint or 'news'
+            except Exception:
+                resource_type_hint = resource_type_hint or None
+
+            facets = {'resource_type_hint': resource_type_hint} if resource_type_hint else {}
+
             return {
                 'category': best_category,
                 'confidence': confidence,
                 'alternatives': alternatives[:3],
                 'reasoning': reasoning,
-                'method': 'rule_engine'
+                'method': 'rule_engine',
+                'facets': facets
             }
             
         except Exception as e:

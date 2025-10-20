@@ -18,6 +18,7 @@ from datetime import datetime
 
 from bs4 import BeautifulSoup
 from .ai_classifier import AIBookmarkClassifier
+from .taxonomy_standardizer import TaxonomyStandardizer
 
 # 导入占位符模块
 from .placeholder_modules import (
@@ -42,6 +43,9 @@ class BookmarkProcessor:
         except (FileNotFoundError, json.JSONDecodeError) as e:
             self.logger.error(f"无法加载或解析配置文件 {config_path}: {e}")
             self.config = {}
+
+        # 标准化层（受控词表）
+        self.standardizer = TaxonomyStandardizer(self.config)
 
         # 延迟初始化组件以避免启动开销
         self._classifier = None
@@ -289,7 +293,8 @@ class BookmarkProcessor:
                     'alternatives': result.alternatives if hasattr(result, 'alternatives') else [],
                     'reasoning': result.reasoning if hasattr(result, 'reasoning') else [],
                     'method': result.method if hasattr(result, 'method') else 'unknown',
-                    'processing_time': result.processing_time if hasattr(result, 'processing_time') else 0.0
+                    'processing_time': result.processing_time if hasattr(result, 'processing_time') else 0.0,
+                    'facets': result.facets if hasattr(result, 'facets') else {}
                 }
             else:
                 # 字典结果
@@ -300,7 +305,8 @@ class BookmarkProcessor:
                     'alternatives': result.get('alternatives', []),
                     'reasoning': result.get('reasoning', []),
                     'method': result.get('method', 'unknown'),
-                    'processing_time': result.get('processing_time', 0.0)
+                    'processing_time': result.get('processing_time', 0.0),
+                    'facets': result.get('facets', {})
                 }
             
             # 限制缓存大小
@@ -324,105 +330,44 @@ class BookmarkProcessor:
             return None
     
     def _organize_bookmarks(self, classified_bookmarks: List[Dict]) -> Dict:
-        """组织书签为层次结构（最终修复版：统一、大小写不敏感、合并逻辑）"""
-        organized = {}
-        
-        # 更全面的分类名称标准化映射 (所有key均为小写)
-        category_mapping = {
-            'ai': '🤖 AI',
-            '人工智能': '🤖 AI',
-            'ai/模型与平台': '🤖 AI/模型平台',
-            'ai/应用与工具': '🤖 AI/应用工具', 
-            'ai/论文与资讯': '🤖 AI/论文资讯',
-            'ai/机器学习': '🤖 AI/机器学习',
-
-            '技术栈': '💻 编程',
-            '技术/编程': '💻 编程',
-            '编程开发': '💻 编程',
-            '编程': '💻 编程',
-            '技术栈/代码 & 开源': '💻 编程/代码仓库',
-            '技术栈/编程语言': '💻 编程/编程语言',
-            '技术栈/web开发': '💻 编程/Web开发',
-            '技术栈/云服务 & devops': '💻 编程/DevOps运维',
-
-            '学习': '📚 学习',
-            '学习资料': '📚 学习',
-            '技术资料': '📚 学习/技术文档',
-            'books': '📚 学习/书籍手册',
-            'lectures': '📚 学习/课程讲座',
-            '教育': '📚 学习/教育',
-
-            '工具': '🛠️ 工具',
-            'utils': '🛠️ 工具',
-            '实用工具': '🛠️ 工具',
-            '软件': '🛠️ 工具/软件',
-            '在线服务': '🛠️ 工具/在线服务',
-            '软件下载': '🛠️ 工具/软件下载',
-            '文档资料': '📚 学习/文档资料',
-
-            '社区': '👥 社区',
-            '技术社区': '👥 社区',
-            '资讯': '📰 资讯',
-            '新闻/资讯': '📰 资讯',
-            '资讯媒体': '📰 资讯',
-            '娱乐': '🎮 娱乐',
-            '娱乐休闲': '🎮 娱乐',
-            '求职': '💼 求职',
-            '求职招聘': '💼 求职',
-            '生物信息': '🧬 生物',
-            '生物': '🧬 生物',
-            '稍后阅读': '📖 稍读',
-            '未分类': '📂 其他',
-            '其他分类': '📂 其他',
-        }
-
-        def get_standard_category(name: str) -> str:
-            """获取标准化的分类名，大小写不敏感"""
-            return category_mapping.get(name.lower(), name)
+        """按 subject -> resource_type 两级组织（受控词表标准化）。"""
+        organized: Dict[str, Dict] = {}
 
         for bookmark in classified_bookmarks:
-            raw_category_name = bookmark.get('category', '未分类').strip()
-            raw_subcategory_name = bookmark.get('subcategory')
-            if raw_subcategory_name:
-                raw_subcategory_name = raw_subcategory_name.strip()
+            category = (bookmark.get('category') or '').strip()
+            subcategory = (bookmark.get('subcategory') or '').strip() or None
 
-            # --- 核心逻辑 ---
-            # 1. 标准化分类名称
-            std_full_name = get_standard_category(raw_category_name)
+            # 从分类派生 subject / resource_type
+            derived_subject, derived_rt = self.standardizer.derive_from_category(
+                category, content_type=None
+            )
 
-            # 2. 解析主分类和子分类
-            main_category = std_full_name
-            sub_category_from_name = None
-            
-            if '/' in std_full_name:
-                parts = std_full_name.split('/', 1)
-                main_category = parts[0].strip()
-                sub_category_from_name = parts[1].strip()
+            # 标准化 subject 与 resource_type
+            subject = derived_subject or self.standardizer.normalize_subject(category) or '其他'
+            # 优先使用规则引擎提供的 resource_type 分面提示
+            facets = bookmark.get('facets') or {}
+            facet_rt_hint = facets.get('resource_type_hint') if isinstance(facets, dict) else None
+            facet_rt_std = self.standardizer.normalize_resource_type(facet_rt_hint) if facet_rt_hint else None
+            resource_type = facet_rt_std or self.standardizer.normalize_resource_type(subcategory) or derived_rt
 
-            # 3. 确定最终的子分类
-            final_subcategory = raw_subcategory_name or sub_category_from_name
+            # 初始化 subject 节点
+            if subject not in organized:
+                organized[subject] = {'_items': [], '_subcategories': {}}
 
-            # 4. 确保主分类在organized字典中存在
-            if main_category not in organized:
-                organized[main_category] = {'_items': [], '_subcategories': {}}
-
-            # 5. 将书签放入正确的位置
-            if final_subcategory:
-                # 放入子分类
-                if final_subcategory not in organized[main_category]['_subcategories']:
-                    organized[main_category]['_subcategories'][final_subcategory] = {'_items': []}
-                organized[main_category]['_subcategories'][final_subcategory]['_items'].append(bookmark)
+            # 放入 resource_type 子类或直接归于 subject
+            if resource_type:
+                if resource_type not in organized[subject]['_subcategories']:
+                    organized[subject]['_subcategories'][resource_type] = {'_items': []}
+                organized[subject]['_subcategories'][resource_type]['_items'].append(bookmark)
             else:
-                # 放入主分类
-                organized[main_category]['_items'].append(bookmark)
-        
+                organized[subject]['_items'].append(bookmark)
+
         # 按置信度排序
-        for category_data in organized.values():
-            category_data['_items'].sort(key=lambda x: x['confidence'], reverse=True)
-            
-            for subcat_data in category_data['_subcategories'].values():
-                subcat_data['_items'].sort(key=lambda x: x['confidence'], reverse=True)
-        
+        for subject_data in organized.values():
+            subject_data['_items'].sort(key=lambda x: x.get('confidence', 0), reverse=True)
+            for rt_data in subject_data['_subcategories'].values():
+                rt_data['_items'].sort(key=lambda x: x.get('confidence', 0), reverse=True)
+
         return organized
     
     def _export_results(self, organized_bookmarks: Dict, output_dir: str):

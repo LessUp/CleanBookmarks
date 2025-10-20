@@ -1,0 +1,17 @@
+subjects:
+  - preferred: "人工智能"
+    variants: ["AI", "人工智慧", "大模型", "LLM", "人工智"]
+  - preferred: "编程"
+    variants: ["编程开发", "程序设计", "Coding", "Programming", "技术栈"]
+  - preferred: "生物"
+    variants: ["生物信息", "生物信息学", "Bioinformatics"]
+  - preferred: "学习"
+    variants: ["学习资料", "文档资料", "教育", "教程", "课程", "书籍"]
+  - preferred: "社区"
+    variants: ["技术社区", "论坛", "社区讨论"]
+  - preferred: "资讯"
+    variants: ["新闻", "新闻资讯", "快讯", "周刊", "weekly"]
+  - preferred: "娱乐"
+    variants: ["娱乐休闲", "影音", "音乐", "游戏", "漫画"]
+  - preferred: "其他"
+    variants: ["未分类", "其他分类", "杂项"]

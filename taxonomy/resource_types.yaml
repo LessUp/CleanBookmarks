@@ -1,0 +1,21 @@
+resource_types:
+  code_repository:
+    variants: ["代码仓库", "repository", "repo", "github", "gitlab"]
+  documentation:
+    variants: ["技术文档", "文档资料", "documentation", "docs", "指南", "手册"]
+  video:
+    variants: ["视频", "影音", "video", "bilibili", "youtube", "讲座", "课程"]
+  blog:
+    variants: ["博客", "blog", "文章"]
+  news:
+    variants: ["资讯", "新闻", "news", "周刊", "weekly"]
+  tool:
+    variants: ["工具", "在线服务", "tool", "service"]
+  forum:
+    variants: ["社区", "论坛", "forum"]
+  webpage:
+    variants: ["网页", "webpage"]
+  course:
+    variants: ["课程", "讲座", "course", "lecture"]
+  paper:
+    variants: ["论文", "paper"]
