@@ -1,0 +1,30 @@
+{
+  "zego.im": { "top": "工作", "second": "ZEGO" },
+  "zego.cloud": { "top": "工作", "second": "ZEGO" },
+  "bgi.com": { "top": "工作", "second": "BGI" },
+  "genomics.cn": { "top": "工作", "second": "BGI" },
+  "git.bgi.com": { "top": "工作", "second": "BGI" },
+  "wiki.it.bgi.com": { "top": "工作", "second": "BGI" },
+  "bugtrace.it.bgi.com": { "top": "工作", "second": "BGI" },
+  "disk.it.bgi.com": { "top": "工作", "second": "BGI" },
+  "pro-bit.bgi.com": { "top": "工作", "second": "BGI" },
+  "halos.bgi.com": { "top": "工作", "second": "BGI" },
+
+  "github.com": { "top": "开发工具" },
+  "gitlab.com": { "top": "开发工具" },
+  "duckduckgo.com": { "top": "AI·大模型" },
+  "perplexity.ai": { "top": "AI·大模型" },
+  "gemini.google.com": { "top": "AI·大模型" },
+  "openai.com": { "top": "AI·大模型" },
+  "huggingface.co": { "top": "AI·大模型" },
+  "mistral.ai": { "top": "AI·大模型" },
+  "qwen.ai": { "top": "AI·大模型" },
+  "baichuan-ai.com": { "top": "AI·大模型" },
+
+  "kibana": { "top": "DevOps·运维" },
+  "elastic": { "top": "DevOps·运维" },
+  "grafana": { "top": "DevOps·运维" },
+  "prometheus": { "top": "DevOps·运维" },
+
+  "go.dev": { "top": "编程语言", "second": "Go" }
+}

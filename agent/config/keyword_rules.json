@@ -1,0 +1,47 @@
+{
+  "zego": { "top": "工作", "second": "ZEGO" },
+  "bgi": { "top": "工作", "second": "BGI" },
+  "genomics": { "top": "工作", "second": "BGI" },
+
+  "llm": { "top": "AI·大模型" },
+  "chatgpt": { "top": "AI·大模型" },
+  "ai": { "top": "AI·大模型" },
+  "deepseek": { "top": "AI·大模型" },
+  "perplexity": { "top": "AI·大模型" },
+  "gemini": { "top": "AI·大模型" },
+  "mistral": { "top": "AI·大模型" },
+  "qwen": { "top": "AI·大模型" },
+
+  "golang": { "top": "编程语言", "second": "Go" },
+  " go ": { "top": "编程语言", "second": "Go" },
+  "cuda": { "top": "编程语言", "second": "C++·系统" },
+  "c++": { "top": "编程语言", "second": "C++·系统" },
+  "rust": { "top": "编程语言", "second": "Rust" },
+
+  "vue": { "top": "Web·前端" },
+  "react": { "top": "Web·前端" },
+  "javascript": { "top": "Web·前端" },
+  "typescript": { "top": "Web·前端" },
+  "django": { "top": "Web·前端" },
+
+  "docker": { "top": "DevOps·运维" },
+  "kubernetes": { "top": "DevOps·运维" },
+  "prometheus": { "top": "DevOps·运维" },
+  "grafana": { "top": "DevOps·运维" },
+  "kibana": { "top": "DevOps·运维" },
+  "jenkins": { "top": "DevOps·运维" },
+
+  "jetbrains": { "top": "开发工具" },
+  "vscode": { "top": "开发工具" },
+  "tmux": { "top": "开发工具" },
+  "warp": { "top": "开发工具" },
+  "yazi": { "top": "开发工具" },
+
+  "api": { "top": "API·平台" },
+  "console": { "top": "API·平台" },
+
+  "unraid": { "top": "Homelab·服务器" },
+  "nas": { "top": "Homelab·服务器" },
+  "homelab": { "top": "Homelab·服务器" },
+  "server": { "top": "Homelab·服务器" }
+}
