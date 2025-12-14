@@ -20,8 +20,16 @@ from pathlib import Path
 from dataclasses import dataclass, field
 from datetime import datetime
 import logging
-from watchdog.observers import Observer
-from watchdog.events import FileSystemEventHandler
+try:
+    from watchdog.observers import Observer
+    from watchdog.events import FileSystemEventHandler
+    WATCHDOG_AVAILABLE = True
+except ImportError:
+    WATCHDOG_AVAILABLE = False
+    Observer = None
+
+    class FileSystemEventHandler:
+        pass
 import jsonschema
 from jsonschema import validate
 import copy
@@ -370,6 +378,10 @@ class EnhancedConfigManager:
     def start_file_monitoring(self):
         """开始文件监控"""
         if self.observer:
+            return
+        
+        if not WATCHDOG_AVAILABLE:
+            self.logger.warning("watchdog 未安装，跳过配置文件监控")
             return
         
         try:
