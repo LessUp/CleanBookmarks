@@ -20,6 +20,11 @@ from bs4 import BeautifulSoup
 from .ai_classifier import AIBookmarkClassifier
 from .taxonomy_standardizer import TaxonomyStandardizer
 
+try:
+    from .llm_organizer import LLMBookmarkOrganizer
+except ImportError:
+    LLMBookmarkOrganizer = None
+
 # 导入占位符模块
 from .placeholder_modules import (
     DataExporter, BookmarkDeduplicator, HealthChecker
@@ -52,6 +57,8 @@ class BookmarkProcessor:
         self._deduplicator = None
         self._health_checker = None
         self._exporter = None
+        self._llm_organizer = None
+        self.llm_organizer_meta: Optional[Dict] = None
         
         # 缓存和性能优化
         self._classification_cache = {}
@@ -65,7 +72,8 @@ class BookmarkProcessor:
             'errors': 0,
             'processing_time': 0.0,
             'categories_found': {},
-            'files_processed': 0
+            'files_processed': 0,
+            'llm_organizer_used': False,
         }
     
     @property
@@ -98,6 +106,20 @@ class BookmarkProcessor:
             from .placeholder_modules import DataExporter
             self._exporter = DataExporter(config=self.config)
         return self._exporter
+    
+    @property
+    def llm_organizer(self) -> Optional[LLMBookmarkOrganizer]:
+        """Lazy loading LLM organizer"""
+        if self._llm_organizer is None and LLMBookmarkOrganizer is not None:
+            try:
+                self._llm_organizer = LLMBookmarkOrganizer(
+                    config_path=self.config_path,
+                    config=self.config
+                )
+            except Exception as exc:
+                self.logger.warning(f"LLM organizer init failed: {exc}")
+                self._llm_organizer = None
+        return self._llm_organizer
     
     def process_files(self, input_files: List[str], output_dir: str = "output", 
                      train_models: bool = False) -> Dict:
@@ -155,6 +177,37 @@ class BookmarkProcessor:
         
         # 组织分类结果
         organized_bookmarks = self._organize_bookmarks(classified_bookmarks)
+
+        # 可选：调用 LLM 进行更高层次的整理
+        self.llm_organizer_meta = None
+        if self.llm_organizer and self.llm_organizer.enabled():
+            try:
+                llm_result = self.llm_organizer.organize(
+                    bookmarks=classified_bookmarks,
+                    baseline=organized_bookmarks
+                )
+            except Exception as exc:
+                self.logger.warning(f"LLM organizer execution failed: {exc}")
+                llm_result = None
+
+            if llm_result and llm_result.get('organized'):
+                organized_bookmarks = llm_result['organized']
+                self.llm_organizer_meta = llm_result.get('meta')
+                self.stats['llm_organizer_used'] = True
+                if self.llm_organizer_meta:
+                    self.stats['llm_organizer_meta'] = self.llm_organizer_meta
+                elif 'llm_organizer_meta' in self.stats:
+                    self.stats.pop('llm_organizer_meta', None)
+            else:
+                self.stats['llm_organizer_used'] = False
+                if 'llm_organizer_meta' in self.stats:
+                    self.stats.pop('llm_organizer_meta', None)
+        else:
+            self.stats['llm_organizer_used'] = False
+            if 'llm_organizer_meta' in self.stats:
+                self.stats.pop('llm_organizer_meta', None)
+
+        organized_bookmarks = self._sort_organized_structure(organized_bookmarks)
         
         # 更新统计
         self.stats['processing_time'] = time.time() - start_time
@@ -362,11 +415,24 @@ class BookmarkProcessor:
             else:
                 organized[subject]['_items'].append(bookmark)
 
-        # 按置信度排序
+        return self._sort_organized_structure(organized)
+
+    def _sort_organized_structure(self, organized: Optional[Dict]) -> Dict:
+        """统一的排序逻辑，保证导出结果有序。"""
+        if not organized:
+            return {}
+
         for subject_data in organized.values():
-            subject_data['_items'].sort(key=lambda x: x.get('confidence', 0), reverse=True)
-            for rt_data in subject_data['_subcategories'].values():
-                rt_data['_items'].sort(key=lambda x: x.get('confidence', 0), reverse=True)
+            items = subject_data.get('_items', [])
+            items.sort(key=lambda x: x.get('confidence', 0.0), reverse=True)
+            subject_data['_items'] = items
+
+            subcategories = subject_data.get('_subcategories', {})
+            for sub_data in subcategories.values():
+                sub_items = sub_data.get('_items', [])
+                sub_items.sort(key=lambda x: x.get('confidence', 0.0), reverse=True)
+                sub_data['_items'] = sub_items
+            subject_data['_subcategories'] = subcategories
 
         return organized
     
@@ -457,9 +523,14 @@ class BookmarkProcessor:
         processed_bookmarks = self.stats.get('processed_bookmarks', 0)
         total_bookmarks = self.stats.get('total_bookmarks', 1)
 
+        llm_stats = None
+        if self.llm_organizer:
+            llm_stats = self.llm_organizer.get_stats()
+
         return {
             **self.stats,
             'classifier_stats': classifier_stats,
             'processing_speed_bps': processed_bookmarks / max(processing_time, 0.001), # bookmarks per second
             'success_rate_percent': (processed_bookmarks / max(total_bookmarks, 1)) * 100,
+            'llm_organizer_stats': llm_stats,
         }
