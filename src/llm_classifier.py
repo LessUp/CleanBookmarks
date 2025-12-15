@@ -22,24 +22,22 @@ LLM Classifier - 可选大模型分类器
 """
 from __future__ import annotations
 
-import os
 import json
 import hashlib
+import os
+import re
 from typing import Dict, List, Optional, Tuple
-import requests
+from urllib.parse import parse_qs, urlparse
 
-_DEFAULT_SYSTEM_PROMPT = (
-    "你是一个严格的书签分类助手。\n"
-    "只从我提供的“有效类别列表”中选择一个最合适的类别；不要编造新类别。\n"
-    "输出严格为 JSON：{category: 字符串, confidence: 0.0~1.0, reasons: [字符串,...]}。\n"
-    "如果无法判断，category 返回 '未分类' 且 confidence 为 0.0。\n"
-)
+import requests
 
 class LLMClassifier:
     def __init__(self, config_path: str = "config.json"):
         self.config_path = config_path
         self.config = self._load_config()
         self.llm_conf = self.config.get("llm", {}) or {}
+        from .llm_prompt_builder import LLMPromptBuilder
+        self.prompt_builder = LLMPromptBuilder(self.config)
         self._cache: Dict[str, Dict] = {}
         self._stats = {
             "enabled": bool(self.llm_conf.get("enable", False)),
@@ -76,24 +74,23 @@ class LLMClassifier:
         max_retries = int(self.llm_conf.get("max_retries", 1))
 
         categories = self._collect_valid_categories(self.config)
-        system_prompt = _DEFAULT_SYSTEM_PROMPT + "\n有效类别列表：\n" + "\n".join(f"- {c}" for c in categories)
-
-        user_content = {
-            "url": url,
-            "title": title,
-            "context": context or {},
-            "instruction": "请仅选择一个最合适的类别，并给出 1~3 条简要理由。",
-        }
+        category_library = self._build_category_library(categories)
+        bookmark_payload = self._build_bookmark_payload(url, title, context or {})
+        hints = self._build_hint_profile(url, title, bookmark_payload)
+        messages, response_format = self.prompt_builder.build_messages(
+            bookmark=bookmark_payload,
+            hints=hints,
+            category_library=category_library,
+        )
 
         payload = {
             "model": model,
             "temperature": temperature,
             "top_p": top_p,
-            "messages": [
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": json.dumps(user_content, ensure_ascii=False)}
-            ]
+            "messages": messages,
         }
+        if response_format:
+            payload["response_format"] = response_format
 
         headers = {
             "Authorization": f"Bearer {api_key}",
@@ -134,7 +131,10 @@ class LLMClassifier:
             "category": category,
             "confidence": max(0.0, min(1.0, confidence)),
             "reasoning": [f"LLM: {r}" for r in reasons],
-            "method": "llm"
+            "method": "llm",
+            "facets": data.get("facets") or {},
+            "subcategory": data.get("subcategory"),
+            "priority_tags": data.get("priority_tags", []),
         }
         self._cache[h] = result
         return result
@@ -205,3 +205,70 @@ class LLMClassifier:
             except Exception:
                 return None
         return None
+
+    def _build_category_library(self, categories: List[str]) -> List[Dict[str, str]]:
+        library = []
+        for name in categories:
+            entry = {"name": name, "description": ""}
+            if "/" in name:
+                main, sub = name.split("/", 1)
+                entry["parent"] = main
+                entry["description"] = f"{main} 下的 {sub}"
+            else:
+                entry["parent"] = None
+                entry["description"] = f"主分类 {name}"
+            library.append(entry)
+        return library
+
+    def _build_bookmark_payload(self, url: str, title: str, context: Dict[str, any]) -> Dict[str, any]:
+        parsed = urlparse(url)
+        domain = parsed.netloc.lower()
+        path_segments = [seg for seg in parsed.path.split("/") if seg]
+        query_params = parse_qs(parsed.query)
+
+        keywords = self._extract_keywords(title)
+
+        payload = {
+            "url": url,
+            "title": title,
+            "domain": domain,
+            "path_segments": path_segments[:8],
+            "query_params": {k: v[:5] for k, v in query_params.items()},
+            "keywords": keywords[:12],
+            "context": context,
+        }
+        return payload
+
+    def _build_hint_profile(self, url: str, title: str, bookmark_payload: Dict[str, any]) -> Dict[str, any]:
+        title_lower = title.lower()
+        hints: Dict[str, any] = {
+            "contains_code": any(token in title_lower for token in ["github", "repo", "代码", "编程"]),
+            "contains_doc": any(token in title_lower for token in ["doc", "文档", "documentation"]),
+            "likely_video": self._is_video_url(url),
+            "likely_news": any(token in title_lower for token in ["news", "资讯", "快讯"]),
+            "likely_forum": any(token in bookmark_payload["domain"] for token in ["forum", "bbs", "community"]),
+        }
+        hints["language"] = self._detect_language(title)
+        hints["secure_scheme"] = url.lower().startswith("https://")
+        return hints
+
+    def _extract_keywords(self, text: str) -> List[str]:
+        tokens = re.findall(r"[a-zA-Z\u4e00-\u9fff]{2,}", text.lower())
+        seen = set()
+        keywords = []
+        for token in tokens:
+            if token not in seen:
+                seen.add(token)
+                keywords.append(token)
+        return keywords
+
+    def _detect_language(self, text: str) -> str:
+        if re.search(r"[\u4e00-\u9fff]", text):
+            return "zh"
+        if re.search(r"[a-zA-Z]", text):
+            return "en"
+        return "unknown"
+
+    def _is_video_url(self, url: str) -> bool:
+        lower = url.lower()
+        return any(host in lower for host in ["youtube.com", "bilibili.com", "vimeo.com"])

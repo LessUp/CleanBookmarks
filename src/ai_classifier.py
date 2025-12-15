@@ -202,6 +202,24 @@ class AIBookmarkClassifier:
                 "学习": ["教程", "文档", "课程", "书籍"],
                 "工具": ["在线工具", "开发工具", "设计工具"],
             },
+            "llm": {
+                "enable": False,
+                "provider": "openai",
+                "base_url": "https://api.openai.com",
+                "model": "gpt-4o-mini",
+                "api_key_env": "OPENAI_API_KEY",
+                "temperature": 0.0,
+                "top_p": 1.0,
+                "timeout_seconds": 25,
+                "max_retries": 1,
+                "organizer": {
+                    "enable": False,
+                    "max_examples_per_category": 5,
+                    "max_domains_per_category": 5,
+                    "max_tokens": 1800,
+                    "force_json": True
+                }
+            },
         }
 
     def extract_features(self, url: str, title: str) -> BookmarkFeatures:

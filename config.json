@@ -17,7 +17,29 @@
     "temperature": 0.0,
     "top_p": 1.0,
     "timeout_seconds": 25,
-    "max_retries": 1
+    "max_retries": 1,
+    "prompt": {
+      "task_description": "请作为 CleanBook-Agent，精准识别浏览器书签的主题、意图与优先级。",
+      "steps": [
+        "解析书签标题、URL、域名、上下文，识别核心主题",
+        "匹配提供的主/子分类，必要时返回 '未分类' 并说明原因",
+        "输出包含 category、confidence、reasons、facets、priority_tags 的 JSON"
+      ],
+      "scoring_notes": "若分类不确定，请降低置信度并说明疑点；需要人工复核时，在 facets.priority_tags 中加入 'review'。",
+      "force_json": true
+    },
+    "organizer": {
+      "enable": false,
+      "model": "",
+      "temperature": 0.0,
+      "top_p": 1.0,
+      "timeout_seconds": 40,
+      "max_retries": 1,
+      "max_examples_per_category": 5,
+      "max_domains_per_category": 5,
+      "max_tokens": 1800,
+      "force_json": true
+    }
   },
   "title_cleaning_rules": {
     "prefixes": [

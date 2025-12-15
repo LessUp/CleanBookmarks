@@ -1476,6 +1476,18 @@ class DataExporter:
                     html_parts.append(f'      - Rule Engine: {methods.get("rule_engine", 0)}')
                     html_parts.append(f'      - ML Classifier: {methods.get("ml_classifier", 0)}')
                     html_parts.append(f'      - Unclassified: {methods.get("unclassified (fallback)", 0)}')
+            if stats.get('llm_organizer_used'):
+                llm_stats = stats.get('llm_organizer_stats', {})
+                html_parts.append('    LLM Organizer: enabled')
+                if llm_stats:
+                    html_parts.append(f'      - Calls: {llm_stats.get("calls", 0)} (cache_hits: {llm_stats.get("cache_hits", 0)})')
+                llm_meta = stats.get('llm_organizer_meta')
+                if llm_meta:
+                    model = llm_meta.get('llm_model', '')
+                    html_parts.append(f'      - Model: {model}')
+                    primary_order = llm_meta.get('primary_order') or []
+                    if primary_order:
+                        html_parts.append(f'      - Primary Order: {", ".join(primary_order[:8])}')
             html_parts.append('-->')
 
         html_parts.append('<DL><p>')
@@ -1590,15 +1602,26 @@ class DataExporter:
     def export_json(self, organized_bookmarks: Dict, output_file: str, stats: Optional[Dict] = None):
         """导出JSON格式 - 详细数据"""
         filtered = self._prune_empty(organized_bookmarks)
+        metadata = {
+            'export_time': self.export_timestamp,
+            'format_version': '2.0',
+            'generator': 'AI智能书签分类系统',
+            'total_categories': len(filtered),
+            'total_bookmarks': self._count_total_bookmarks(filtered)
+        }
+        statistics = dict(stats) if isinstance(stats, dict) else {}
+
+        if isinstance(stats, dict):
+            meta = stats.get('llm_organizer_meta')
+            if meta:
+                metadata['llm_organizer'] = meta
+            llm_stats = stats.get('llm_organizer_stats')
+            if llm_stats:
+                statistics['llm_organizer'] = llm_stats
+
         data = {
-            'metadata': {
-                'export_time': self.export_timestamp,
-                'format_version': '2.0',
-                'generator': 'AI智能书签分类系统',
-                'total_categories': len(filtered),
-                'total_bookmarks': self._count_total_bookmarks(filtered)
-            },
-            'statistics': stats or {},
+            'metadata': metadata,
+            'statistics': statistics,
             'bookmarks': filtered
         }
         
@@ -1632,6 +1655,25 @@ class DataExporter:
             lines.append(f"- **处理时间**: {stats.get('processing_time', 0):.2f} 秒")
             lines.append(f"- **处理速度**: {stats.get('processing_speed_bps', 0):.2f} 书签/秒")
             lines.append('')
+
+            if stats.get('llm_organizer_used'):
+                lines.append(f"- **LLM 深度整理**: ✅ 已启用")
+                llm_meta = stats.get('llm_organizer_meta', {})
+                llm_stats = stats.get('llm_organizer_stats', {})
+                model = llm_meta.get('llm_model') if isinstance(llm_meta, dict) else None
+                if model:
+                    lines.append(f"  - 使用模型: {model}")
+                if llm_meta:
+                    primary_order = llm_meta.get('primary_order') or []
+                    if primary_order:
+                        joined = ', '.join(primary_order[:8])
+                        lines.append(f"  - 主分类顺序: {joined}")
+                if llm_stats:
+                    lines.append(f"  - 调用次数: {llm_stats.get('calls', 0)} (缓存命中 {llm_stats.get('cache_hits', 0)})")
+                lines.append('')
+            else:
+                lines.append(f"- **LLM 深度整理**: ❌ 未启用或调用失败")
+                lines.append('')
 
             # 分类方法统计
             classifier_stats = stats.get('classifier_stats', {})

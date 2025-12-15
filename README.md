@@ -37,7 +37,29 @@ cleanbook-wizard
 编辑 `config.json` 启用：
 
 ```json
-"llm": {"enable": true, "provider": "openai", "base_url": "https://api.openai.com", "model": "gpt-4o-mini", "api_key_env": "OPENAI_API_KEY"}
+"llm": {
+  "enable": true,
+  "provider": "openai",
+  "base_url": "https://api.openai.com",
+  "model": "gpt-4o-mini",
+  "api_key_env": "OPENAI_API_KEY",
+  "prompt": {
+    "task_description": "请作为 CleanBook-Agent，精确完成浏览器书签分类与信心标注。",
+    "steps": [
+      "分析书签的标题、URL、域名、关键词，推测主题、意图、受众",
+      "从提供的分类库中寻找最合适的主/子类，必要时选择 '未分类'",
+      "输出格式化 JSON，包含 category, confidence, reasons, facets 等字段"
+    ],
+    "scoring_notes": "当存在不确定性时，降低 confidence 并指出疑惑点；若需人工复核，可在 facets.priority_tags 中加入 'review'。",
+    "force_json": true
+  },
+  "organizer": {
+    "enable": true,
+    "max_examples_per_category": 5,
+    "max_domains_per_category": 5,
+    "max_tokens": 1800
+  }
+}
 ```
 
 然后设置环境变量（PowerShell）：
@@ -47,6 +69,19 @@ $env:OPENAI_API_KEY = "你的_API_Key"
 ```
 
 未设置 Key 或失败时自动回退到离线分类。
+
+开启 `organizer.enable` 后，会在分类完成后调用同一套 OpenAI 兼容接口，对书签类别进行二次聚类、排序与总结：
+
+- 自动生成更紧凑的主分类、子分类，并带有洞察说明；
+- 失败或未开启时自动回退至传统分类树；
+- 统计信息与导出报告会附带 LLM 参与情况，便于复盘。
+
+此外，可通过 `llm.prompt` 定制提示词模板：
+
+- `task_description`：高层任务定义，可结合团队术语；
+- `steps`：指引 LLM 按步骤执行（支持多条）；
+- `scoring_notes`：补充置信度与复核策略；
+- `few_shots`（可选）：提供示例输入/输出，提升对特定类别的识别准确率。
 
 ## 目录结构（建议）
 
