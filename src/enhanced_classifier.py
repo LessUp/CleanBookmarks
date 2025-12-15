@@ -24,10 +24,15 @@ from datetime import datetime, timedelta
 
 # 导入机器学习分类器
 try:
-    from ml_classifier import MLClassifierWrapper
+    from .ml_classifier import MLClassifierWrapper
     ML_AVAILABLE = True
-except ImportError:
-    ML_AVAILABLE = False
+except Exception:
+    try:
+        from ml_classifier import MLClassifierWrapper
+        ML_AVAILABLE = True
+    except Exception:
+        ML_AVAILABLE = False
+        MLClassifierWrapper = None
 
 # 导入 LLM 分类器（可选）
 try:
