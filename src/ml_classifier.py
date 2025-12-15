@@ -11,8 +11,10 @@ Advanced Machine Learning Classification System
 """
 
 import os
+import sys
 import pickle
 import json
+import warnings
 import numpy as np
 from typing import Dict, List, Tuple, Optional, Any
 from datetime import datetime
@@ -35,6 +37,7 @@ try:
     from sklearn.pipeline import Pipeline
     from sklearn.compose import ColumnTransformer
     from sklearn.base import BaseEstimator, TransformerMixin
+    from sklearn.exceptions import InconsistentVersionWarning
     import joblib
     
     # 中文分词
@@ -47,8 +50,11 @@ try:
     ML_AVAILABLE = True
 except ImportError as e:
     ML_AVAILABLE = False
+    InconsistentVersionWarning = None
     print(f"警告: 机器学习依赖未安装: {e}")
     print("请运行: pip install scikit-learn jieba langdetect")
+
+_SKLEARN_MODEL_WARNING_EMITTED = False
 
 @dataclass
 class MLFeatures:
@@ -295,8 +301,7 @@ class MLBookmarkClassifier:
         # 3. Logistic Regression
         models['lr'] = LogisticRegression(
             max_iter=1000,
-            random_state=42,
-            n_jobs=-1
+            random_state=42
         )
         
         # 4. Naive Bayes
@@ -463,7 +468,10 @@ class MLBookmarkClassifier:
             self.training_stats.update({
                 'total_samples': len(self.training_data),
                 'categories_count': len(set(self.training_labels)),
-                'last_training_time': datetime.now().isoformat()
+                'last_training_time': datetime.now().isoformat(),
+                'python_version': sys.version.split()[0],
+                'numpy_version': np.__version__,
+                'sklearn_version': getattr(sys.modules.get('sklearn'), '__version__', None)
             })
             
             self.logger.info("模型训练完成")
@@ -647,41 +655,64 @@ class MLBookmarkClassifier:
             return False
         
         try:
-            # 加载特征提取器
-            extractor_path = os.path.join(self.model_dir, 'feature_extractor.pkl')
-            if os.path.exists(extractor_path):
-                self.feature_extractor = joblib.load(extractor_path)
-            
-            # 加载模型
-            model_files = [
-                'rf_model.pkl', 'svm_model.pkl', 'lr_model.pkl', 
-                'nb_model.pkl', 'gb_model.pkl', 'sgd_model.pkl'
-            ]
-            
-            for model_file in model_files:
-                model_path = os.path.join(self.model_dir, model_file)
-                if os.path.exists(model_path):
-                    model_name = model_file.replace('_model.pkl', '')
-                    self.models[model_name] = joblib.load(model_path)
-            
-            # 加载集成模型
-            ensemble_path = os.path.join(self.model_dir, 'ensemble_model.pkl')
-            if os.path.exists(ensemble_path):
-                self.ensemble_model = joblib.load(ensemble_path)
-            elif 'rf' in self.models:
-                self.ensemble_model = self.models['rf']  # 使用随机森林作为默认
-            
-            # 加载标签编码器
-            encoder_path = os.path.join(self.model_dir, 'label_encoder.pkl')
-            if os.path.exists(encoder_path):
-                self.label_encoder = joblib.load(encoder_path)
-            
-            # 加载统计信息
             stats_path = os.path.join(self.model_dir, 'training_stats.json')
             if os.path.exists(stats_path):
                 with open(stats_path, 'r', encoding='utf-8') as f:
                     self.training_stats = json.load(f)
-            
+
+            captured_inconsistent_warnings = []
+            with warnings.catch_warnings(record=True) as captured:
+                if InconsistentVersionWarning is not None:
+                    warnings.simplefilter('always', InconsistentVersionWarning)
+
+                # 加载特征提取器
+                extractor_path = os.path.join(self.model_dir, 'feature_extractor.pkl')
+                if os.path.exists(extractor_path):
+                    self.feature_extractor = joblib.load(extractor_path)
+                
+                # 加载模型
+                model_files = [
+                    'rf_model.pkl', 'svm_model.pkl', 'lr_model.pkl', 
+                    'nb_model.pkl', 'gb_model.pkl', 'sgd_model.pkl'
+                ]
+                
+                for model_file in model_files:
+                    model_path = os.path.join(self.model_dir, model_file)
+                    if os.path.exists(model_path):
+                        model_name = model_file.replace('_model.pkl', '')
+                        self.models[model_name] = joblib.load(model_path)
+                
+                # 加载集成模型
+                ensemble_path = os.path.join(self.model_dir, 'ensemble_model.pkl')
+                if os.path.exists(ensemble_path):
+                    self.ensemble_model = joblib.load(ensemble_path)
+                elif 'rf' in self.models:
+                    self.ensemble_model = self.models['rf']  # 使用随机森林作为默认
+                
+                # 加载标签编码器
+                encoder_path = os.path.join(self.model_dir, 'label_encoder.pkl')
+                if os.path.exists(encoder_path):
+                    self.label_encoder = joblib.load(encoder_path)
+
+                if InconsistentVersionWarning is not None:
+                    captured_inconsistent_warnings = [
+                        w for w in captured if w.category is InconsistentVersionWarning
+                    ]
+
+            if captured_inconsistent_warnings:
+                global _SKLEARN_MODEL_WARNING_EMITTED
+                if not _SKLEARN_MODEL_WARNING_EMITTED:
+                    _SKLEARN_MODEL_WARNING_EMITTED = True
+                    sklearn_current = getattr(sys.modules.get('sklearn'), '__version__', None)
+                    sklearn_saved = None
+                    if isinstance(self.training_stats, dict):
+                        sklearn_saved = self.training_stats.get('sklearn_version')
+                    details = str(captured_inconsistent_warnings[0].message)
+                    self.logger.warning(
+                        "检测到 sklearn 版本不一致的模型反序列化警告（已汇总隐藏重复警告）。"
+                        f" 当前 sklearn={sklearn_current}，模型记录 sklearn={sklearn_saved}。"
+                        f" 详情示例：{details}。建议删除 models/ml 并重新训练（--train）。"
+                    )
             self.logger.info(f"模型已从 {self.model_dir} 加载")
             return True
             
