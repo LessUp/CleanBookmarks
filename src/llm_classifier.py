@@ -150,34 +150,62 @@ class LLMClassifier:
         except Exception:
             return {}
 
+    @staticmethod
+    def _strip_category_prefix(text: str) -> str:
+        if not text:
+            return ""
+        s = str(text).strip()
+        i = 0
+        while i < len(s) and not ("\u4e00" <= s[i] <= "\u9fff" or s[i].isalnum()):
+            i += 1
+        return s[i:].strip() if i < len(s) else s
+
+    def _normalize_category_string(self, category: str) -> str:
+        if not category:
+            return ""
+        cat = str(category).strip()
+        if not cat:
+            return ""
+        if '/' in cat:
+            main, sub = cat.split('/', 1)
+            main_n = self._strip_category_prefix(main)
+            sub_n = self._strip_category_prefix(sub)
+            return f"{main_n}/{sub_n}" if sub_n else main_n
+        return self._strip_category_prefix(cat)
+
     def _collect_valid_categories(self, config: Dict) -> List[str]:
         cats = []
         if isinstance(config.get("category_order"), list):
-            cats.extend([str(x) for x in config["category_order"]])
+            for x in config["category_order"]:
+                nx = self._normalize_category_string(str(x))
+                if nx and nx not in cats:
+                    cats.append(nx)
         # 也收集 category_rules 的顶层键
         rules = config.get("category_rules", {}) or {}
         for k in rules.keys():
-            if k not in cats:
-                cats.append(k)
+            nk = self._normalize_category_string(k)
+            if nk and nk not in cats:
+                cats.append(nk)
         # 最后补充“未分类”
         if "未分类" not in cats:
             cats.append("未分类")
         return cats
 
     def _map_to_known_category(self, cat: str, valid: List[str]) -> str:
-        if not cat:
+        cat_n = self._normalize_category_string(cat)
+        if not cat_n:
             return "未分类"
         # 直接匹配
-        if cat in valid:
-            return cat
+        if cat_n in valid:
+            return cat_n
         # 忽略大小写和两端空白试匹配
-        low = cat.strip().lower()
+        low = cat_n.strip().lower()
         for v in valid:
             if v.strip().lower() == low:
                 return v
         # 允许用 '/' 拆分选择主分类
-        if '/' in cat:
-            main = cat.split('/', 1)[0].strip()
+        if '/' in cat_n:
+            main = cat_n.split('/', 1)[0].strip()
             for v in valid:
                 if v.strip().lower() == main.lower():
                     return v

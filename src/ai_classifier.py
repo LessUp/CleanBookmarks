@@ -169,10 +169,79 @@ class AIBookmarkClassifier:
     def _load_config(self) -> Dict:
         try:
             with open(self.config_path, 'r', encoding='utf-8') as f:
-                return json.load(f)
+                config = json.load(f)
+            return self._normalize_category_config(config)
         except Exception as e:
             self.logger.error(f"配置文件加载失败: {e}")
             return self._get_default_config()
+
+    @staticmethod
+    def _strip_category_prefix(text: str) -> str:
+        if not text:
+            return ""
+        s = str(text).strip()
+        i = 0
+        while i < len(s) and not ("\u4e00" <= s[i] <= "\u9fff" or s[i].isalnum()):
+            i += 1
+        return s[i:].strip() if i < len(s) else s
+
+    def _normalize_category_string(self, category: str) -> str:
+        if not category:
+            return ""
+        cat = str(category).strip()
+        if not cat:
+            return ""
+        if '/' in cat:
+            main, sub = cat.split('/', 1)
+            main_n = self._strip_category_prefix(main)
+            sub_n = self._strip_category_prefix(sub)
+            return f"{main_n}/{sub_n}" if sub_n else main_n
+        return self._strip_category_prefix(cat)
+
+    def _normalize_category_config(self, config: Dict) -> Dict:
+        if not isinstance(config, dict):
+            return {}
+
+        normalized = dict(config)
+
+        order = normalized.get('category_order')
+        if isinstance(order, list):
+            normalized['category_order'] = [self._strip_category_prefix(x) for x in order if str(x).strip()]
+
+        dgr = normalized.get('domain_grouping_rules')
+        if isinstance(dgr, dict):
+            new_dgr = {}
+            for k, v in dgr.items():
+                nk = self._strip_category_prefix(k)
+                if not nk:
+                    continue
+                if nk in new_dgr and isinstance(new_dgr[nk], list) and isinstance(v, list):
+                    new_dgr[nk].extend(v)
+                else:
+                    new_dgr[nk] = v
+            normalized['domain_grouping_rules'] = new_dgr
+
+        pr = normalized.get('priority_rules')
+        if isinstance(pr, dict):
+            new_pr = {}
+            for k, v in pr.items():
+                nk = self._normalize_category_string(k)
+                if not nk:
+                    continue
+                new_pr[nk] = v
+            normalized['priority_rules'] = new_pr
+
+        cr = normalized.get('category_rules')
+        if isinstance(cr, dict):
+            new_cr = {}
+            for k, v in cr.items():
+                nk = self._normalize_category_string(k)
+                if not nk:
+                    continue
+                new_cr[nk] = v
+            normalized['category_rules'] = new_cr
+
+        return normalized
 
     def _get_default_config(self) -> Dict:
         return {
@@ -378,13 +447,13 @@ class AIBookmarkClassifier:
         for res in results:
             if isinstance(res, dict):
                 method = res.get('method', 'unknown')
-                category = res.get('category', '未分类')
+                category = self._normalize_category_string(res.get('category', '未分类')) or '未分类'
                 confidence = res.get('confidence', 0.0)
                 reasoning = res.get('reasoning', [])
                 facets = res.get('facets', {}) or {}
             else:
                 method = res.method
-                category = res.category
+                category = self._normalize_category_string(res.category) or '未分类'
                 confidence = res.confidence
                 reasoning = res.reasoning
                 facets = getattr(res, 'facets', {}) or {}

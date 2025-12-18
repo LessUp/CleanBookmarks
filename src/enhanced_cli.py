@@ -654,25 +654,12 @@ class InteractiveBookmarkManager:
 def main():
     """主函数"""
     try:
-        if len(sys.argv) > 1:
-            # 命令行模式
-            parser = argparse.ArgumentParser(description="智能书签分类系统")
-            parser.add_argument('--interactive', action='store_true', help='启动交互模式')
-            parser.add_argument('--gui', action='store_true', help='启动图形界面（如果可用）')
-            
-            args = parser.parse_args()
-            
-            if args.interactive or args.gui:
-                manager = InteractiveBookmarkManager()
-                manager.run()
-            else:
-                # 默认命令行处理
-                print("使用 --interactive 启动交互模式")
-        else:
-            # 默认启动交互模式
-            manager = InteractiveBookmarkManager()
-            manager.run()
-            
+        try:
+            from .cli_interface import CLIInterface
+        except Exception:
+            from cli_interface import CLIInterface
+
+        CLIInterface().run()
     except Exception as e:
         print(f"程序启动失败: {e}")
         sys.exit(1)
