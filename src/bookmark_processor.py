@@ -16,7 +16,10 @@ from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 
-from bs4 import BeautifulSoup
+try:
+    from bs4 import BeautifulSoup
+except ImportError:
+    BeautifulSoup = None
 from .ai_classifier import AIBookmarkClassifier
 from .taxonomy_standardizer import TaxonomyStandardizer
 
@@ -194,6 +197,9 @@ class BookmarkProcessor:
     def process_files(self, input_files: List[str], output_dir: str = "output", 
                      train_models: bool = False) -> Dict:
         """处理多个书签文件"""
+        if BeautifulSoup is None:
+            raise ImportError("缺少依赖 beautifulsoup4（bs4），请先安装：pip install beautifulsoup4")
+
         start_time = time.time()
         
         self.logger.info(f"开始处理 {len(input_files)} 个文件")
@@ -297,8 +303,11 @@ class BookmarkProcessor:
     def _load_bookmarks_from_file(self, file_path: str) -> List[Dict]:
         """优化的从HTML文件加载书签"""
         bookmarks = []
-        
+
         try:
+            if BeautifulSoup is None:
+                raise ImportError("缺少依赖 beautifulsoup4（bs4），请先安装：pip install beautifulsoup4")
+
             # 使用更快的解析器
             with open(file_path, 'r', encoding='utf-8') as f:
                 content = f.read()
@@ -492,19 +501,64 @@ class BookmarkProcessor:
         if not organized:
             return {}
 
-        for subject_data in organized.values():
+        def _count_subject(subject_data: Dict) -> int:
+            total = 0
             items = subject_data.get('_items', [])
-            items.sort(key=lambda x: x.get('confidence', 0.0), reverse=True)
-            subject_data['_items'] = items
+            if isinstance(items, list):
+                total += len(items)
+            subcategories = subject_data.get('_subcategories', {})
+            if isinstance(subcategories, dict):
+                for sub_data in subcategories.values():
+                    sub_items = (sub_data or {}).get('_items', [])
+                    if isinstance(sub_items, list):
+                        total += len(sub_items)
+            return total
+
+        category_order = self.config.get('category_order')
+        preferred_subject_order: List[str] = []
+        if isinstance(category_order, list):
+            for raw in category_order:
+                if not raw:
+                    continue
+                subj = self.standardizer.normalize_subject(str(raw))
+                if subj and subj not in preferred_subject_order:
+                    preferred_subject_order.append(subj)
+
+        preferred_subject_order = [s for s in preferred_subject_order if s in organized]
+
+        ordered_subjects: List[str] = []
+        ordered_subjects.extend(preferred_subject_order)
+
+        remaining = [s for s in organized.keys() if s not in ordered_subjects]
+        remaining.sort(key=lambda s: (-_count_subject(organized.get(s) or {}), str(s)))
+        ordered_subjects.extend(remaining)
+
+        sorted_organized: Dict[str, Dict] = {}
+        for subject in ordered_subjects:
+            subject_data = organized.get(subject) or {}
+
+            items = subject_data.get('_items', [])
+            if isinstance(items, list):
+                items.sort(key=lambda x: x.get('confidence', 0.0), reverse=True)
+                subject_data['_items'] = items
 
             subcategories = subject_data.get('_subcategories', {})
-            for sub_data in subcategories.values():
-                sub_items = sub_data.get('_items', [])
-                sub_items.sort(key=lambda x: x.get('confidence', 0.0), reverse=True)
-                sub_data['_items'] = sub_items
-            subject_data['_subcategories'] = subcategories
+            if isinstance(subcategories, dict):
+                for sub_data in subcategories.values():
+                    sub_items = (sub_data or {}).get('_items', [])
+                    if isinstance(sub_items, list):
+                        sub_items.sort(key=lambda x: x.get('confidence', 0.0), reverse=True)
+                        sub_data['_items'] = sub_items
 
-        return organized
+                ordered_subcats = sorted(
+                    subcategories.items(),
+                    key=lambda kv: (-len((kv[1] or {}).get('_items', []) or []), str(kv[0]))
+                )
+                subject_data['_subcategories'] = {k: v for k, v in ordered_subcats}
+
+            sorted_organized[subject] = subject_data
+
+        return sorted_organized
     
     def _export_results(self, organized_bookmarks: Dict, output_dir: str):
         """优化的导出处理结果"""

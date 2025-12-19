@@ -54,6 +54,12 @@ except ImportError as e:
     print(f"警告: 机器学习依赖未安装: {e}")
     print("请运行: pip install scikit-learn jieba langdetect")
 
+    class BaseEstimator:
+        pass
+
+    class TransformerMixin:
+        pass
+
 _SKLEARN_MODEL_WARNING_EMITTED = False
 
 @dataclass
@@ -736,6 +742,8 @@ class MLClassifierWrapper:
     """ML分类器包装器，用于集成到主分类系统"""
     
     def __init__(self, model_dir="models/ml"):
+        if not ML_AVAILABLE:
+            raise ImportError("机器学习依赖不可用，请运行: pip install scikit-learn jieba langdetect")
         self.ml_classifier = MLBookmarkClassifier(model_dir)
         self.is_trained = False
         

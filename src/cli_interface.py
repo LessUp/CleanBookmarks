@@ -10,6 +10,7 @@ import json
 import logging
 from typing import Dict, List, Optional
 from pathlib import Path
+from datetime import datetime
 
 try:
     from rich.console import Console
@@ -152,25 +153,25 @@ class CLIInterface:
         try:
             if RICH_AVAILABLE:
                 with Progress(
-                    TextColumn("[bold blue]处理进度"),
+                    TextColumn("[bold blue]处理"),
                     BarColumn(bar_width=None),
                     "[progress.percentage]{task.percentage:>3.1f}%",
                     TimeRemainingColumn(),
                     console=self.console
                 ) as progress:
-                    task = progress.add_task("处理中...", total=100)
-                    
-                    # 这里应该有实际的进度更新逻辑
-                    import time
-                    for i in range(100):
-                        time.sleep(0.02)  # 模拟处理
-                        progress.update(task, advance=1)
-            
-            stats = self.processor.process_files(
-                input_files=input_files,
-                output_dir=output_dir,
-                train_models=train_models
-            )
+                    task = progress.add_task("处理中...", total=1)
+                    stats = self.processor.process_files(
+                        input_files=input_files,
+                        output_dir=output_dir,
+                        train_models=train_models
+                    )
+                    progress.update(task, advance=1)
+            else:
+                stats = self.processor.process_files(
+                    input_files=input_files,
+                    output_dir=output_dir,
+                    train_models=train_models
+                )
             
             self._show_processing_results(stats)
             
@@ -179,26 +180,58 @@ class CLIInterface:
     
     def _select_input_files(self) -> List[str]:
         """选择输入文件"""
-        input_dir = "tests/input"
-        
-        if not os.path.exists(input_dir):
-            self._warning(f"输入目录 {input_dir} 不存在")
+        default_path = "tests/input"
+        if RICH_AVAILABLE:
+            raw = Prompt.ask("输入HTML书签文件/目录（可用逗号分隔多个文件）", default=default_path)
+        else:
+            raw = input(f"输入HTML书签文件/目录（默认: {default_path}）: ").strip() or default_path
+
+        raw = (raw or '').strip()
+        if not raw:
             return []
-        
-        html_files = [f for f in os.listdir(input_dir) if f.endswith('.html')]
-        
-        if not html_files:
-            self._warning(f"在 {input_dir} 中没有找到HTML文件")
-            return []
-        
-        self._info(f"找到 {len(html_files)} 个HTML文件:")
-        
-        selected_files = []
-        for file in html_files:
-            if self._confirm(f"处理文件 {file}?", default=True):
-                selected_files.append(os.path.join(input_dir, file))
-        
-        return selected_files
+
+        candidates: List[str] = []
+
+        if ',' in raw and not os.path.exists(raw):
+            parts = [p.strip() for p in raw.split(',') if p.strip()]
+            candidates.extend(parts)
+        else:
+            candidates.append(raw)
+
+        files: List[str] = []
+        allowed_exts = ('.html', '.htm')
+        for p in candidates:
+            p = os.path.expanduser(p)
+            if os.path.isfile(p):
+                if p.lower().endswith(allowed_exts):
+                    files.append(p)
+                else:
+                    self._warning(f"跳过非HTML文件: {p}")
+                continue
+
+            if os.path.isdir(p):
+                html_files = sorted([f for f in os.listdir(p) if f.lower().endswith(allowed_exts)])
+                if not html_files:
+                    self._warning(f"目录中没有找到HTML文件: {p}")
+                    continue
+                self._info(f"在目录 {p} 找到 {len(html_files)} 个HTML文件")
+                for fname in html_files:
+                    full = os.path.join(p, fname)
+                    if self._confirm(f"处理文件 {fname}?", default=True):
+                        files.append(full)
+                continue
+
+            self._warning(f"路径不存在: {p}")
+
+        deduped: List[str] = []
+        seen = set()
+        for fp in files:
+            if fp in seen:
+                continue
+            seen.add(fp)
+            deduped.append(fp)
+
+        return deduped
     
     def _get_output_directory(self) -> str:
         """获取输出目录"""
@@ -222,18 +255,29 @@ class CLIInterface:
     
     def _show_processing_results(self, stats: Dict):
         """显示处理结果"""
+        total = stats.get('total_bookmarks', 0)
+        processed = stats.get('processed_bookmarks', 0)
+        duplicates = stats.get('duplicates_removed', 0)
+        errors = stats.get('errors', 0)
+        processing_time = stats.get('processing_time', 0.0) or 0.0
+        speed = stats.get('processing_speed_bps')
+        if speed is None:
+            speed = stats.get('processing_speed')
+        if speed is None:
+            speed = (processed / processing_time) if processing_time else 0.0
+
         if RICH_AVAILABLE:
             table = Table(title="处理结果统计", border_style="green")
             table.add_column("指标", style="cyan")
             table.add_column("值", style="yellow")
-            
+
             metrics = [
-                ("总书签数", stats['total_bookmarks']),
-                ("成功处理", stats['processed_bookmarks']), 
-                ("去除重复", stats['duplicates_removed']),
-                ("处理错误", stats['errors']),
-                ("处理时间", f"{stats['processing_time']:.2f}秒"),
-                ("处理速度", f"{stats.get('processing_speed', 0):.1f} 书签/秒")
+                ("总书签数", total),
+                ("成功处理", processed),
+                ("去除重复", duplicates),
+                ("处理错误", errors),
+                ("处理时间", f"{processing_time:.2f}秒"),
+                ("处理速度", f"{float(speed):.1f} 书签/秒")
             ]
             
             for metric, value in metrics:
@@ -242,11 +286,12 @@ class CLIInterface:
             self.console.print(table)
         else:
             print("\n处理结果统计:")
-            print(f"  总书签数: {stats['total_bookmarks']}")
-            print(f"  成功处理: {stats['processed_bookmarks']}")
-            print(f"  去除重复: {stats['duplicates_removed']}")
-            print(f"  处理错误: {stats['errors']}")
-            print(f"  处理时间: {stats['processing_time']:.2f}秒")
+            print(f"  总书签数: {total}")
+            print(f"  成功处理: {processed}")
+            print(f"  去除重复: {duplicates}")
+            print(f"  处理错误: {errors}")
+            print(f"  处理时间: {processing_time:.2f}秒")
+            print(f"  处理速度: {float(speed):.1f} 书签/秒")
     
     def _view_results(self):
         """查看处理结果"""
@@ -358,9 +403,54 @@ class CLIInterface:
         
         if not self._confirm("继续进行健康检查?"):
             return
-        
-        # 这里应该实现实际的健康检查逻辑
-        self._info("健康检查功能开发中...")
+
+        source_options = {
+            '1': '从HTML书签文件读取',
+            '2': '从输出JSON报告读取',
+            'q': '取消'
+        }
+        choice = self._show_menu(source_options, "选择健康检查数据来源")
+        if choice == 'q':
+            return
+
+        processor = self._get_processor()
+
+        bookmarks: List[Dict] = []
+        if choice == '1':
+            input_files = self._select_input_files()
+            if not input_files:
+                self._warning("没有选择输入文件")
+                return
+            for fp in input_files:
+                try:
+                    bookmarks.extend(processor._load_bookmarks_from_file(fp))
+                except Exception as e:
+                    self._warning(f"读取失败 {fp}: {e}")
+
+        elif choice == '2':
+            report_path = self._select_output_json_report()
+            if not report_path:
+                return
+            try:
+                with open(report_path, 'r', encoding='utf-8') as f:
+                    data = json.load(f)
+                organized = data.get('bookmarks') if isinstance(data, dict) else None
+                bookmarks = self._flatten_organized_bookmarks(organized)
+            except Exception as e:
+                self._error(f"读取JSON报告失败: {e}")
+                return
+
+        if not bookmarks:
+            self._warning("没有可检查的书签")
+            return
+
+        self._info(f"开始检查 {len(bookmarks)} 个链接...")
+        try:
+            results = processor.health_checker.check_bookmarks(bookmarks)
+            summary = processor.health_checker.get_summary(results)
+            self._show_health_summary(summary)
+        except Exception as e:
+            self._error(f"健康检查失败: {e}")
     
     def _show_statistics(self):
         """显示统计信息"""
@@ -408,7 +498,7 @@ class CLIInterface:
 ⚙️ 设置 - 管理系统配置
 
 使用流程:
-1. 将浏览器导出的书签文件放在 tests/input/ 目录
+1. 选择浏览器导出的HTML书签文件或包含HTML文件的目录（可用逗号分隔多个路径，支持 .html/.htm）
 2. 选择"处理书签文件"开始智能分类
 3. 查看生成的HTML、JSON、Markdown结果文件
 4. 根据需要调整配置和重新训练模型
@@ -489,28 +579,443 @@ class CLIInterface:
     
     # 占位符方法 - 待实现
     def _show_model_status(self):
-        self._info("模型状态查看功能开发中...")
+        classifier = self._get_classifier()
+        stats = classifier.get_statistics()
+        ml = classifier.ml_classifier
+        ml_enabled = ml is not None
+        ml_trained = bool(getattr(ml, 'is_trained', False)) if ml_enabled else False
+        ml_stats = ml.get_stats() if ml_enabled else {}
+
+        if RICH_AVAILABLE:
+            table = Table(title="模型状态", border_style="blue")
+            table.add_column("项目", style="cyan")
+            table.add_column("值", style="yellow")
+            table.add_row("ML已启用", str(ml_enabled))
+            table.add_row("ML已训练", str(ml_trained))
+            table.add_row("缓存命中", str(stats.get('cache_hits', 0)))
+            table.add_row("缓存命中率", f"{stats.get('cache_hit_rate', 0) * 100:.1f}%")
+            table.add_row("平均置信度", f"{stats.get('average_confidence', 0):.3f}")
+            methods = stats.get('classification_methods', {})
+            if isinstance(methods, dict):
+                table.add_row("规则引擎", str(methods.get('rule_engine', 0)))
+                table.add_row("ML分类", str(methods.get('ml_classifier', 0)))
+                table.add_row("语义分析", str(methods.get('semantic_analyzer', 0)))
+                table.add_row("用户画像", str(methods.get('user_profiler', 0)))
+                table.add_row("LLM", str(methods.get('llm', 0)))
+                table.add_row("未分类", str(methods.get('unclassified (fallback)', 0)))
+            self.console.print(table)
+            if ml_stats:
+                self.console.print(Panel(json.dumps(ml_stats, ensure_ascii=False, indent=2)[:2000], title="ML统计", border_style="green"))
+        else:
+            print("\n模型状态:")
+            print(f"  ML已启用: {ml_enabled}")
+            print(f"  ML已训练: {ml_trained}")
+            print(f"  缓存命中: {stats.get('cache_hits', 0)}")
+            print(f"  缓存命中率: {stats.get('cache_hit_rate', 0) * 100:.1f}%")
+            print(f"  平均置信度: {stats.get('average_confidence', 0):.3f}")
+            if ml_stats:
+                print("  ML统计:")
+                print(json.dumps(ml_stats, ensure_ascii=False, indent=2)[:2000])
     
     def _save_model(self):
-        self._info("模型保存功能开发中...")
+        classifier = self._get_classifier()
+        default_path = "models/ai_classifier.json"
+        if RICH_AVAILABLE:
+            path = Prompt.ask("保存模型到", default=default_path)
+        else:
+            path = input(f"保存模型到 (默认: {default_path}): ").strip() or default_path
+        try:
+            classifier.save_model(path)
+            self._success(f"模型已保存到: {path}")
+        except Exception as e:
+            self._error(f"模型保存失败: {e}")
     
     def _load_model(self):
-        self._info("模型加载功能开发中...")
+        classifier = self._get_classifier()
+        default_path = "models/ai_classifier.json"
+        if RICH_AVAILABLE:
+            path = Prompt.ask("从路径加载模型", default=default_path)
+        else:
+            path = input(f"从路径加载模型 (默认: {default_path}): ").strip() or default_path
+        try:
+            classifier.load_model(path)
+            self._success(f"模型已加载: {path}")
+        except Exception as e:
+            self._error(f"模型加载失败: {e}")
     
     def _retrain_model(self):
-        self._info("模型重训练功能开发中...")
+        classifier = self._get_classifier()
+        ml = classifier.ml_classifier
+        if not ml:
+            self._warning("机器学习组件未启用")
+            return
+
+        report_path = self._select_output_json_report()
+        if not report_path:
+            return
+
+        try:
+            with open(report_path, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+        except Exception as e:
+            self._error(f"读取JSON报告失败: {e}")
+            return
+
+        organized = data.get('bookmarks') if isinstance(data, dict) else None
+        bookmarks = self._flatten_organized_bookmarks(organized)
+        if not bookmarks:
+            self._warning("报告中没有找到书签数据")
+            return
+
+        reset = self._confirm("是否清空当前训练缓存并从零开始训练?", default=True)
+        if reset and hasattr(ml, 'ml_classifier'):
+            try:
+                ml.ml_classifier.training_data.clear()
+                ml.ml_classifier.training_labels.clear()
+            except Exception:
+                pass
+
+        if RICH_AVAILABLE:
+            min_conf = float(Prompt.ask("训练最小置信度", default="0.8"))
+        else:
+            min_conf = float(input("训练最小置信度 (默认: 0.8): ").strip() or "0.8")
+
+        samples_added = 0
+        for bm in bookmarks:
+            if not isinstance(bm, dict):
+                continue
+            url = (bm.get('url') or '').strip()
+            title = (bm.get('title') or '').strip()
+            category = (bm.get('category') or '').strip()
+            if not url or not title or not category or category == '未分类':
+                continue
+
+            conf_raw = bm.get('confidence', 0.0)
+            try:
+                confidence = float(conf_raw) if conf_raw is not None else 0.0
+            except Exception:
+                confidence = 0.0
+
+            if confidence < min_conf:
+                continue
+
+            features = classifier.extract_features(url, title)
+            ml.add_training_sample(features, category)
+            samples_added += 1
+
+        self._info(f"已收集训练样本: {samples_added}")
+        if samples_added < 10 and not self._confirm("训练数据可能不足，仍然继续训练?", default=False):
+            return
+
+        try:
+            ok = ml.train_model()
+        except Exception as e:
+            self._error(f"训练失败: {e}")
+            return
+
+        if ok:
+            self._success("模型训练完成并已保存")
+        else:
+            self._error("模型训练失败")
     
     def _clear_model_cache(self):
-        self._info("缓存清理功能开发中...")
+        cleared = []
+        if self.processor is not None:
+            try:
+                self.processor._classification_cache.clear()
+                self.processor._url_validation_cache.clear()
+                cleared.append('处理器缓存')
+            except Exception:
+                pass
+
+        classifier = self.classifier
+        if classifier is None and self.processor is not None:
+            try:
+                classifier = self.processor.classifier
+            except Exception:
+                classifier = None
+
+        if classifier is not None:
+            try:
+                classifier.feature_cache.clear()
+                classifier.classification_cache.clear()
+                cleared.append('分类器缓存')
+            except Exception:
+                pass
+
+        if cleared:
+            self._success(f"已清理: {', '.join(cleared)}")
+        else:
+            self._warning("没有可清理的缓存")
     
     def _show_current_config(self):
-        self._info("配置查看功能开发中...")
+        config_path = "config.json"
+        if not os.path.exists(config_path):
+            self._error(f"配置文件不存在: {config_path}")
+            return
+
+        try:
+            with open(config_path, 'r', encoding='utf-8') as f:
+                raw = json.load(f)
+        except Exception as e:
+            self._error(f"读取配置失败: {e}")
+            return
+
+        display = raw
+        try:
+            display = self._get_processor().config
+        except Exception:
+            display = raw
+
+        ai = display.get('ai_settings', {}) if isinstance(display, dict) else {}
+        llm = display.get('llm', {}) if isinstance(display, dict) else {}
+        order = display.get('category_order', []) if isinstance(display, dict) else []
+
+        if RICH_AVAILABLE:
+            table = Table(title="当前配置（部分）", border_style="magenta")
+            table.add_column("键", style="cyan")
+            table.add_column("值", style="yellow")
+            table.add_row("show_confidence_indicator", str(display.get('show_confidence_indicator')))
+            table.add_row("ai_settings.confidence_threshold", str(ai.get('confidence_threshold')))
+            table.add_row("ai_settings.max_workers", str(ai.get('max_workers')))
+            table.add_row("ai_settings.use_semantic_analysis", str(ai.get('use_semantic_analysis')))
+            table.add_row("ai_settings.use_user_profiling", str(ai.get('use_user_profiling')))
+            table.add_row("llm.enable", str(llm.get('enable')))
+            table.add_row("llm.provider", str(llm.get('provider')))
+            table.add_row("llm.base_url", str(llm.get('base_url')))
+            table.add_row("llm.model", str(llm.get('model')))
+            if isinstance(order, list) and order:
+                table.add_row("category_order", ", ".join([str(x) for x in order]))
+            self.console.print(table)
+        else:
+            print("\n当前配置（部分）:")
+            print(f"  show_confidence_indicator: {display.get('show_confidence_indicator')}")
+            print(f"  ai_settings.confidence_threshold: {ai.get('confidence_threshold')}")
+            print(f"  ai_settings.max_workers: {ai.get('max_workers')}")
+            print(f"  ai_settings.use_semantic_analysis: {ai.get('use_semantic_analysis')}")
+            print(f"  ai_settings.use_user_profiling: {ai.get('use_user_profiling')}")
+            print(f"  llm.enable: {llm.get('enable')}")
+            print(f"  llm.provider: {llm.get('provider')}")
+            print(f"  llm.base_url: {llm.get('base_url')}")
+            print(f"  llm.model: {llm.get('model')}")
+            if isinstance(order, list) and order:
+                print(f"  category_order: {', '.join([str(x) for x in order])}")
     
     def _modify_config(self):
-        self._info("配置修改功能开发中...")
+        config_path = "config.json"
+        if not os.path.exists(config_path):
+            self._error(f"配置文件不存在: {config_path}")
+            return
+
+        try:
+            with open(config_path, 'r', encoding='utf-8') as f:
+                config = json.load(f)
+        except Exception as e:
+            self._error(f"读取配置失败: {e}")
+            return
+
+        ai = config.setdefault('ai_settings', {})
+        llm = config.setdefault('llm', {})
+
+        edit_options = {
+            '1': 'show_confidence_indicator',
+            '2': 'ai_settings.confidence_threshold',
+            '3': 'ai_settings.max_workers',
+            '4': 'ai_settings.use_semantic_analysis',
+            '5': 'ai_settings.use_user_profiling',
+            '6': 'llm.enable',
+            '7': 'llm.provider',
+            '8': 'llm.base_url',
+            '9': 'llm.model',
+            '10': 'llm.api_key_env'
+        }
+
+        choice = self._show_menu(edit_options, "选择要修改的配置项")
+
+        try:
+            if choice == '1':
+                config['show_confidence_indicator'] = self._confirm(
+                    f"show_confidence_indicator (当前: {config.get('show_confidence_indicator')})",
+                    default=bool(config.get('show_confidence_indicator', True))
+                )
+            elif choice == '2':
+                current = ai.get('confidence_threshold', 0.7)
+                val = float(Prompt.ask("confidence_threshold (0-1)", default=str(current))) if RICH_AVAILABLE else float(input(f"confidence_threshold (0-1) (默认: {current}): ") or current)
+                ai['confidence_threshold'] = max(0.0, min(1.0, val))
+            elif choice == '3':
+                current = ai.get('max_workers', 4)
+                val = int(Prompt.ask("max_workers", default=str(current))) if RICH_AVAILABLE else int(input(f"max_workers (默认: {current}): ") or current)
+                ai['max_workers'] = max(1, val)
+            elif choice == '4':
+                ai['use_semantic_analysis'] = self._confirm(
+                    f"use_semantic_analysis (当前: {ai.get('use_semantic_analysis')})",
+                    default=bool(ai.get('use_semantic_analysis', True))
+                )
+            elif choice == '5':
+                ai['use_user_profiling'] = self._confirm(
+                    f"use_user_profiling (当前: {ai.get('use_user_profiling')})",
+                    default=bool(ai.get('use_user_profiling', True))
+                )
+            elif choice == '6':
+                llm['enable'] = self._confirm(
+                    f"llm.enable (当前: {llm.get('enable')})",
+                    default=bool(llm.get('enable', False))
+                )
+            elif choice == '7':
+                current = llm.get('provider', 'openai')
+                llm['provider'] = Prompt.ask("llm.provider", default=str(current)) if RICH_AVAILABLE else (input(f"llm.provider (默认: {current}): ").strip() or str(current))
+            elif choice == '8':
+                current = llm.get('base_url', 'https://api.openai.com')
+                llm['base_url'] = Prompt.ask("llm.base_url", default=str(current)) if RICH_AVAILABLE else (input(f"llm.base_url (默认: {current}): ").strip() or str(current))
+            elif choice == '9':
+                current = llm.get('model', '')
+                llm['model'] = Prompt.ask("llm.model", default=str(current)) if RICH_AVAILABLE else (input(f"llm.model (默认: {current}): ").strip() or str(current))
+            elif choice == '10':
+                current = llm.get('api_key_env', 'OPENAI_API_KEY')
+                llm['api_key_env'] = Prompt.ask("llm.api_key_env", default=str(current)) if RICH_AVAILABLE else (input(f"llm.api_key_env (默认: {current}): ").strip() or str(current))
+
+        except Exception as e:
+            self._error(f"配置修改失败: {e}")
+            return
+
+        if not self._confirm("确认写入 config.json?", default=False):
+            self._info("已取消写入")
+            return
+
+        try:
+            with open(config_path, 'w', encoding='utf-8') as f:
+                json.dump(config, f, ensure_ascii=False, indent=2)
+            self._success("配置已更新")
+        except Exception as e:
+            self._error(f"写入配置失败: {e}")
     
     def _reload_config(self):
-        self._info("配置重载功能开发中...")
+        self.processor = None
+        self.classifier = None
+        self._success("配置已重载（下次操作将重新加载配置）")
     
     def _export_config(self):
-        self._info("配置导出功能开发中...")
+        config_path = "config.json"
+        if not os.path.exists(config_path):
+            self._error(f"配置文件不存在: {config_path}")
+            return
+
+        ts = datetime.now().strftime('%Y%m%d_%H%M%S')
+        default_path = os.path.join('output', f'config_export_{ts}.json')
+        if RICH_AVAILABLE:
+            out_path = Prompt.ask("导出到", default=default_path)
+        else:
+            out_path = input(f"导出到 (默认: {default_path}): ").strip() or default_path
+
+        try:
+            os.makedirs(os.path.dirname(out_path) or '.', exist_ok=True)
+            with open(config_path, 'r', encoding='utf-8') as rf:
+                content = rf.read()
+            with open(out_path, 'w', encoding='utf-8') as wf:
+                wf.write(content)
+            self._success(f"配置已导出: {out_path}")
+        except Exception as e:
+            self._error(f"配置导出失败: {e}")
+
+    def _get_processor(self) -> BookmarkProcessor:
+        if self.processor is None:
+            self.processor = BookmarkProcessor()
+        return self.processor
+
+    def _get_classifier(self) -> AIBookmarkClassifier:
+        if self.processor is not None:
+            try:
+                self.classifier = self.processor.classifier
+                return self.classifier
+            except Exception:
+                pass
+        if self.classifier is None:
+            self.classifier = AIBookmarkClassifier()
+        return self.classifier
+
+    def _select_output_json_report(self) -> Optional[str]:
+        output_dir = "output"
+        if RICH_AVAILABLE:
+            output_dir = Prompt.ask("结果目录", default=output_dir)
+        else:
+            output_dir = input(f"结果目录 (默认: {output_dir}): ").strip() or output_dir
+
+        if not os.path.isdir(output_dir):
+            self._warning("没有找到输出目录")
+            return None
+
+        files = sorted([f for f in os.listdir(output_dir) if f.lower().endswith('.json')])
+        if not files:
+            self._warning("没有找到JSON报告")
+            return None
+
+        self._info("可用的JSON报告:")
+        for i, file in enumerate(files, 1):
+            file_path = os.path.join(output_dir, file)
+            size = os.path.getsize(file_path)
+            print(f"  {i}. {file} ({size} 字节)")
+
+        try:
+            if RICH_AVAILABLE:
+                choice = int(Prompt.ask(f"选择文件 (1-{len(files)})", default="1"))
+            else:
+                choice = int(input(f"选择文件 (1-{len(files)}): ") or "1")
+            if 1 <= choice <= len(files):
+                return os.path.join(output_dir, files[choice - 1])
+        except Exception:
+            self._error("无效的选择")
+            return None
+
+        return None
+
+    def _flatten_organized_bookmarks(self, organized) -> List[Dict]:
+        items: List[Dict] = []
+        if not isinstance(organized, dict):
+            return items
+        for _, category_data in organized.items():
+            if not isinstance(category_data, dict):
+                continue
+            for item in category_data.get('_items', []) or []:
+                if isinstance(item, dict):
+                    items.append(item)
+            subs = category_data.get('_subcategories', {}) or {}
+            if isinstance(subs, dict):
+                for _, sub_data in subs.items():
+                    if not isinstance(sub_data, dict):
+                        continue
+                    for item in sub_data.get('_items', []) or []:
+                        if isinstance(item, dict):
+                            items.append(item)
+        return items
+
+    def _show_health_summary(self, summary: Dict):
+        if not isinstance(summary, dict):
+            self._warning("健康检查摘要格式异常")
+            return
+
+        if RICH_AVAILABLE:
+            table = Table(title="健康检查摘要", border_style="green")
+            table.add_column("指标", style="cyan")
+            table.add_column("值", style="yellow")
+            table.add_row("总数", str(summary.get('total_count', 0)))
+            table.add_row("可访问", str(summary.get('accessible_count', 0)))
+            table.add_row("错误", str(summary.get('error_count', 0)))
+            table.add_row("警告", str(summary.get('warning_count', 0)))
+            table.add_row("平均响应时间(ms)", str(summary.get('average_response_time', 0)))
+            table.add_row("摘要", str(summary.get('summary', '')))
+            self.console.print(table)
+
+            broken = summary.get('broken_bookmarks', [])
+            if isinstance(broken, list) and broken:
+                self.console.print(Panel(json.dumps(broken, ensure_ascii=False, indent=2)[:2000], title="不可用链接(前N条)", border_style="red"))
+            slow = summary.get('slow_bookmarks', [])
+            if isinstance(slow, list) and slow:
+                self.console.print(Panel(json.dumps(slow, ensure_ascii=False, indent=2)[:2000], title="慢速链接(前N条)", border_style="yellow"))
+        else:
+            print("\n健康检查摘要:")
+            print(f"  总数: {summary.get('total_count', 0)}")
+            print(f"  可访问: {summary.get('accessible_count', 0)}")
+            print(f"  错误: {summary.get('error_count', 0)}")
+            print(f"  警告: {summary.get('warning_count', 0)}")
+            print(f"  平均响应时间(ms): {summary.get('average_response_time', 0)}")
+            print(f"  摘要: {summary.get('summary', '')}")

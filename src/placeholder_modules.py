@@ -11,6 +11,11 @@ from collections import Counter
 from typing import Dict, List, Optional, Set
 from urllib.parse import urlparse
 
+try:
+    from .performance_optimizer import PerformanceMonitor as _OPTIMIZED_PERFORMANCE_MONITOR
+except Exception:
+    _OPTIMIZED_PERFORMANCE_MONITOR = None
+
 class SemanticAnalyzer:
     """语义分析器 - 基于词向量和语义相似度的分类"""
     
@@ -601,12 +606,30 @@ class UserProfiler:
 class PerformanceMonitor:
     """性能监控器 - 待完整实现"""
     
-    def __init__(self):
+    def __init__(self, max_history: int = 1000):
         self.metrics = {}
+        self._impl = None
+        if _OPTIMIZED_PERFORMANCE_MONITOR is not None:
+            try:
+                self._impl = _OPTIMIZED_PERFORMANCE_MONITOR(max_history=max_history)
+            except Exception:
+                self._impl = None
     
     def get_summary(self):
         """获取性能摘要"""
+        if self._impl is not None:
+            try:
+                return self._impl.get_performance_summary()
+            except Exception:
+                return self.metrics
         return self.metrics
+
+    def __getattr__(self, name: str):
+        if name.startswith('_'):
+            raise AttributeError(name)
+        if self._impl is not None:
+            return getattr(self._impl, name)
+        raise AttributeError(name)
 
 # deduplicator.py
 import re

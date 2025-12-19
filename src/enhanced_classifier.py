@@ -24,15 +24,16 @@ from datetime import datetime, timedelta
 
 # 导入机器学习分类器
 try:
-    from .ml_classifier import MLClassifierWrapper
-    ML_AVAILABLE = True
+    from .ml_classifier import MLClassifierWrapper, ML_AVAILABLE as _ML_DEPS_AVAILABLE
 except Exception:
     try:
-        from ml_classifier import MLClassifierWrapper
-        ML_AVAILABLE = True
+        from ml_classifier import MLClassifierWrapper, ML_AVAILABLE as _ML_DEPS_AVAILABLE
     except Exception:
-        ML_AVAILABLE = False
         MLClassifierWrapper = None
+
+        _ML_DEPS_AVAILABLE = False
+
+ML_AVAILABLE = bool(_ML_DEPS_AVAILABLE and MLClassifierWrapper is not None)
 
 # 导入 LLM 分类器（可选）
 try:
@@ -112,7 +113,11 @@ class EnhancedClassifier:
         # 机器学习分类器
         self.ml_classifier = None
         if ML_AVAILABLE:
-            self.ml_classifier = MLClassifierWrapper()
+            try:
+                self.ml_classifier = MLClassifierWrapper()
+            except Exception as e:
+                self.logger.warning(f"机器学习组件初始化失败: {e}")
+                self.ml_classifier = None
         # LLM 分类器（按配置）
         self.llm_classifier = None
         if LLMClassifier is not None:
@@ -144,7 +149,7 @@ class EnhancedClassifier:
                 config = json.load(f)
             return config
         except Exception as e:
-            self.logger.error(f"Failed to load config: {e}")
+            logging.getLogger(__name__).error(f"Failed to load config: {e}")
             return self._get_default_config()
     
     def _get_default_config(self) -> Dict:
