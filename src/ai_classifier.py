@@ -85,13 +85,13 @@ class ClassificationResult:
 class AIBookmarkClassifier:
     """AI智能书签分类器"""
 
-    def __init__(self, config_path: str = "config.json", enable_ml: bool = True):
+    def __init__(self, config_path: str = "config.json", enable_ml: bool = True, config: Optional[Dict] = None):
         self.config_path = config_path
         self.enable_ml = enable_ml
         self.logger = logging.getLogger(__name__)
 
         # 延迟初始化组件
-        self._config: Optional[Dict] = None
+        self._config: Optional[Dict] = self._normalize_category_config(config) if isinstance(config, dict) else None
         self._rule_engine: Optional[RuleEngine] = None
         self._semantic_analyzer: Optional[SemanticAnalyzer] = None
         self._user_profiler: Optional[UserProfiler] = None
@@ -487,13 +487,46 @@ class AIBookmarkClassifier:
 
         subcategory = self._determine_subcategory(best_category, features)
 
+        final_method = '+'.join(set(methods_used)) if methods_used else 'unknown'
+
+        threshold = self.config.get('ai_settings', {}).get('confidence_threshold', 0.7)
+        try:
+            threshold = float(threshold)
+        except Exception:
+            threshold = 0.7
+        if threshold < 0:
+            threshold = 0.0
+        if threshold > 1:
+            threshold = 1.0
+
+        if best_category != "未分类" and confidence < threshold:
+            threshold_reasoning = list(all_reasoning)
+            threshold_reasoning.append(
+                f"最终置信度 {confidence:.2f} 低于阈值 {threshold:.2f}，标记为未分类"
+            )
+
+            threshold_alternatives = [(best_category, confidence)]
+            for alt in alternatives:
+                if alt[0] != best_category:
+                    threshold_alternatives.append(alt)
+
+            return ClassificationResult(
+                category="未分类",
+                subcategory=None,
+                confidence=confidence,
+                reasoning=threshold_reasoning,
+                alternatives=threshold_alternatives[:3],
+                method=final_method,
+                facets=merged_facets,
+            )
+
         return ClassificationResult(
             category=best_category,
             subcategory=subcategory,
             confidence=confidence,
             reasoning=all_reasoning,
             alternatives=alternatives[:3],
-            method='+'.join(set(methods_used)) if methods_used else 'unknown',
+            method=final_method,
             facets=merged_facets,
         )
 

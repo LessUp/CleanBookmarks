@@ -40,51 +40,92 @@ class RuleEngine:
     
     def _compile_rules(self):
         """预编译规则以提高性能"""
-        category_rules = self.config.get('category_rules', {})
-        
-        for category, category_data in category_rules.items():
-            rules = category_data.get('rules', [])
-            
-            self.compiled_rules[category] = []
-            
-            for i, rule in enumerate(rules):
-                rule_id = f"{category}_{i}"
-                match_type = rule.get('match', '')
-                keywords = rule.get('keywords', [])
-                weight = rule.get('weight', 1.0)
-                exclusions = rule.get('must_not_contain', [])
-                
-                # 预编译正则表达式
-                compiled_patterns = []
-                for keyword in keywords:
+        self.compiled_rules = {}
+
+        processing_order = self.config.get('processing_order')
+        if not isinstance(processing_order, list) or not processing_order:
+            processing_order = ['priority_rules', 'category_rules']
+
+        for section in processing_order:
+            section_rules = self.config.get(section, {})
+            if not isinstance(section_rules, dict):
+                continue
+
+            for category, category_data in section_rules.items():
+                rules = (category_data or {}).get('rules', [])
+                if not isinstance(rules, list) or not rules:
+                    continue
+
+                if category not in self.compiled_rules:
+                    self.compiled_rules[category] = []
+
+                category_weight = (category_data or {}).get('weight', 1.0)
+                try:
+                    category_weight = float(category_weight)
+                except Exception:
+                    category_weight = 1.0
+
+                for i, rule in enumerate(rules):
+                    rule_id = f"{section}:{category}_{i}"
+                    match_type = (rule or {}).get('match', '')
+                    keywords = (rule or {}).get('keywords', [])
+                    weight = (rule or {}).get('weight', 1.0)
+                    exclusions = (rule or {}).get('must_not_contain', [])
+                    match_all_keywords_in = (rule or {}).get('match_all_keywords_in', {})
+
                     try:
-                        # 转义特殊字符，但保留一些通配符
-                        escaped_keyword = re.escape(keyword).replace(r'\*', '.*').replace(r'\?', '.')
-                        pattern = re.compile(escaped_keyword, re.IGNORECASE)
-                        compiled_patterns.append(pattern)
-                    except re.error:
-                        self.logger.warning(f"无效的正则表达式: {keyword}")
-                        continue
-                
-                compiled_exclusions = []
-                for exclusion in exclusions:
-                    try:
-                        pattern = re.compile(re.escape(exclusion), re.IGNORECASE)
-                        compiled_exclusions.append(pattern)
-                    except re.error:
-                        continue
-                
-                compiled_rule = {
-                    'rule_id': rule_id,
-                    'match_type': match_type,
-                    'patterns': compiled_patterns,
-                    'exclusions': compiled_exclusions,
-                    'weight': weight,
-                    'original_keywords': keywords
-                }
-                
-                self.compiled_rules[category].append(compiled_rule)
-        
+                        weight = float(weight)
+                    except Exception:
+                        weight = 1.0
+                    weight = weight * category_weight
+
+                    compiled_patterns = []
+                    for keyword in keywords:
+                        try:
+                            escaped_keyword = re.escape(keyword).replace(r'\*', '.*').replace(r'\?', '.')
+                            if match_type == 'url_ends_with':
+                                escaped_keyword = f"{escaped_keyword}$"
+                            pattern = re.compile(escaped_keyword, re.IGNORECASE)
+                            compiled_patterns.append(pattern)
+                        except re.error:
+                            self.logger.warning(f"无效的正则表达式: {keyword}")
+                            continue
+
+                    compiled_exclusions = []
+                    for exclusion in exclusions:
+                        try:
+                            pattern = re.compile(re.escape(exclusion), re.IGNORECASE)
+                            compiled_exclusions.append(pattern)
+                        except re.error:
+                            continue
+
+                    compiled_all_keywords = {}
+                    if isinstance(match_all_keywords_in, dict):
+                        for field_name, field_keywords in match_all_keywords_in.items():
+                            if not isinstance(field_keywords, list):
+                                continue
+                            field_patterns = []
+                            for kw in field_keywords:
+                                try:
+                                    escaped_kw = re.escape(kw).replace(r'\*', '.*').replace(r'\?', '.')
+                                    field_patterns.append(re.compile(escaped_kw, re.IGNORECASE))
+                                except re.error:
+                                    continue
+                            if field_patterns:
+                                compiled_all_keywords[str(field_name)] = field_patterns
+
+                    compiled_rule = {
+                        'rule_id': rule_id,
+                        'match_type': match_type,
+                        'patterns': compiled_patterns,
+                        'exclusions': compiled_exclusions,
+                        'weight': weight,
+                        'original_keywords': keywords,
+                        'match_all_keywords_in': compiled_all_keywords,
+                    }
+
+                    self.compiled_rules[category].append(compiled_rule)
+
         self.logger.info(f"预编译了 {sum(len(rules) for rules in self.compiled_rules.values())} 个规则")
     
     def classify(self, features) -> Optional[Dict]:
@@ -114,8 +155,10 @@ class RuleEngine:
             reasoning = self._generate_reasoning(matches, best_category)
             
             # 生成备选分类
-            alternatives = [(cat, score/total_score) for cat, score in category_scores.items() 
-                          if cat != best_category]
+            alternatives = []
+            if total_score > 0:
+                alternatives = [(cat, score/total_score) for cat, score in category_scores.items() 
+                              if cat != best_category]
             alternatives.sort(key=lambda x: x[1], reverse=True)
             
             self.stats['total_matches'] += 1
@@ -176,7 +219,8 @@ class RuleEngine:
             'title': features.title.lower(),
             'url': features.url.lower(),
             'path': '/'.join(features.path_segments).lower(),
-            'content_type': features.content_type
+            'content_type': features.content_type,
+            'url_ends_with': features.url.lower(),
         }
         
         for category, rules in self.compiled_rules.items():
@@ -199,6 +243,27 @@ class RuleEngine:
                                 break
                         
                         if not excluded:
+                            all_keywords_in = rule.get('match_all_keywords_in') or {}
+                            if all_keywords_in:
+                                passed = True
+                                for field_name, field_patterns in all_keywords_in.items():
+                                    field_text = match_texts.get(field_name, '')
+                                    if not field_text:
+                                        passed = False
+                                        break
+                                    field_ok = False
+                                    for fp in field_patterns:
+                                        try:
+                                            if fp.search(field_text):
+                                                field_ok = True
+                                                break
+                                        except Exception:
+                                            continue
+                                    if not field_ok:
+                                        passed = False
+                                        break
+                                if not passed:
+                                    continue
                             rule_match = RuleMatch(
                                 rule_id=rule['rule_id'],
                                 category=category,

@@ -36,11 +36,29 @@ from .placeholder_modules import (
 class BookmarkProcessor:
     """书签处理器主类"""
     
-    def __init__(self, config_path: str = "config.json", max_workers: int = 4, use_ml: bool = True):
+    def __init__(
+        self,
+        config_path: str = "config.json",
+        max_workers: int = 4,
+        use_ml: bool = True,
+        confidence_threshold: Optional[float] = None,
+    ):
         self.config_path = config_path
         # 优化线程池大小：限制最大线程数避免过度竞争
         self.max_workers = min(max_workers, 32)  # 限制最大32线程
         self.use_ml = use_ml
+
+        self.confidence_threshold: Optional[float] = None
+        if confidence_threshold is not None:
+            try:
+                ct = float(confidence_threshold)
+                if ct < 0:
+                    ct = 0.0
+                if ct > 1:
+                    ct = 1.0
+                self.confidence_threshold = ct
+            except Exception:
+                self.confidence_threshold = None
         
         self.logger = logging.getLogger(__name__)
         
@@ -48,11 +66,20 @@ class BookmarkProcessor:
         try:
             with open(config_path, 'r', encoding='utf-8') as f:
                 self.config = json.load(f)
+            self._config_load_ok = True
         except (FileNotFoundError, json.JSONDecodeError) as e:
             self.logger.error(f"无法加载或解析配置文件 {config_path}: {e}")
             self.config = {}
+            self._config_load_ok = False
 
         self.config = self._normalize_category_config(self.config)
+
+        if self.confidence_threshold is not None:
+            ai_settings = self.config.get('ai_settings')
+            if not isinstance(ai_settings, dict):
+                ai_settings = {}
+                self.config['ai_settings'] = ai_settings
+            ai_settings['confidence_threshold'] = self.confidence_threshold
 
         # 标准化层（受控词表）
         self.standardizer = TaxonomyStandardizer(self.config)
@@ -153,7 +180,15 @@ class BookmarkProcessor:
     def classifier(self):
         """Lazy loading classifier"""
         if self._classifier is None:
-            self._classifier = AIBookmarkClassifier(self.config_path, enable_ml=self.use_ml)
+            injected_config = self.config if getattr(self, '_config_load_ok', False) else None
+            self._classifier = AIBookmarkClassifier(self.config_path, enable_ml=self.use_ml, config=injected_config)
+
+            if self.confidence_threshold is not None:
+                ai_settings = self._classifier.config.get('ai_settings')
+                if not isinstance(ai_settings, dict):
+                    ai_settings = {}
+                    self._classifier.config['ai_settings'] = ai_settings
+                ai_settings['confidence_threshold'] = self.confidence_threshold
         return self._classifier
     
     @property

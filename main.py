@@ -124,7 +124,8 @@ def main():
             processor = BookmarkProcessor(
                 config_path=args.config,
                 max_workers=args.workers,
-                use_ml=not args.no_ml
+                use_ml=not args.no_ml,
+                confidence_threshold=args.threshold,
             )
             
             results = processor.process_files(
